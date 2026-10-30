@@ -4,6 +4,10 @@ import {
 } from "./recurring.js";
 import { isWalletGroup } from "./groups.js";
 import { buildMeta, metaLine, lastMeta } from "./private-meta.js";
+import {
+  itemMarkerLine, parseItemMarker, validateSetupPayload,
+  scheduleLine, lastSchedule, scheduledMonthsDue, scheduledRecordLine
+} from "./setup.js";
 
 // Private Drive storage. Uses only the user's temporary drive.file OAuth token.
 // Recognize the original app-created Wallet bills folder by its marker after moves within Drive.
@@ -314,7 +318,10 @@ function fileHasItem(content, group, item) {
   const itemKey = item.toLocaleLowerCase("en");
   return content.split("\n").some(line => {
     const fields = line.replace(/\r$/, "").split("\t");
-    return fields[0] === group && String(fields[1] || "").toLocaleLowerCase("en") === itemKey;
+    return ((fields[0] === group && fields[1]) ||
+      (fields[0] === "@ITEM" && fields[1] === group && fields[2])) &&
+      String(fields[0] === "@ITEM" ? fields[2] : fields[1])
+        .toLocaleLowerCase("en") === itemKey;
   });
 }
 
