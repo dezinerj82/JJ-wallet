@@ -1,5 +1,5 @@
 import { initialiseGoogleLogin, restoreLoginSession, signIn, signOut, getDriveToken } from "./auth.js";
-import { findBillsFolder, readWalletTextFiles, addWalletItem } from "./drive.js";
+import { findBillsFolder, readWalletTextFiles, addWalletItem, updateWalletItem } from "./drive.js";
 import {
   WALLET_GROUPS, parseWalletFiles, entriesForMonth,
   monthKey, shiftedMonthKey, formatMonth, formatAmount
@@ -14,6 +14,7 @@ let connectionVersion = 0;
 let selectingAccountRequired = false;
 let attemptedFastLogin = false;
 let signInReady = false;
+let editingEntry = null;
 const expandedGroups = new Map(WALLET_GROUPS.map(group => [group, true]));
 
 const loginView = document.getElementById("login-view");
@@ -36,6 +37,7 @@ const nextButton = document.getElementById("month-next-button");
 const refreshButton = document.getElementById("refresh-wallet-button");
 const addButton = document.getElementById("add-item-button");
 const addPanel = document.getElementById("add-item-panel");
+const addHeading = document.getElementById("add-item-heading");
 const addForm = document.getElementById("add-item-form");
 const addGroup = document.getElementById("add-item-group");
 const addName = document.getElementById("add-item-name");
@@ -88,6 +90,10 @@ function resetWallet() {
   walletTableWrap.hidden = true;
   walletTableBody.replaceChildren();
   addPanel.hidden = true;
+  editingEntry = null;
+  addGroup.disabled = false;
+  addName.readOnly = false;
+  addMonth.disabled = false;
   addForm.reset();
   addButton.disabled = true;
   submitItemButton.disabled = false;
@@ -153,7 +159,7 @@ function renderMonth() {
     const headingRow = document.createElement("tr");
     headingRow.className = "group-heading";
     const headingCell = document.createElement("th");
-    headingCell.colSpan = 3;
+    headingCell.colSpan = 4;
     headingCell.scope = "rowgroup";
 
     const button = document.createElement("button");
@@ -176,7 +182,7 @@ function renderMonth() {
       const empty = document.createElement("tr");
       empty.className = "empty-row";
       const cell = document.createElement("td");
-      cell.colSpan = 3;
+      cell.colSpan = 4;
       cell.textContent = "No items";
       empty.append(cell);
       rows.append(empty);
@@ -203,6 +209,36 @@ function renderMonth() {
         description = "Recorded income";
       }
       addTextCell(row, description, "wallet-detail");
+
+      const actionCell = document.createElement("td");
+      actionCell.className = "wallet-update-cell";
+      const editButton = document.createElement("button");
+      editButton.type = "button";
+      editButton.className = "update-item-button";
+      editButton.setAttribute("aria-label", "Update " + entry.item);
+      const editable = entry.group !== "Saving" && entry.month >= currentMonth;
+      editButton.disabled = !editable;
+      editButton.title = editable ? "Update " + entry.item :
+        "Completed months and savings balances cannot be edited here";
+      const pencil = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      pencil.setAttribute("viewBox", "0 0 24 24");
+      pencil.setAttribute("width", "19");
+      pencil.setAttribute("height", "19");
+      pencil.setAttribute("fill", "none");
+      pencil.setAttribute("stroke", "currentColor");
+      pencil.setAttribute("stroke-width", "2");
+      pencil.setAttribute("stroke-linecap", "round");
+      pencil.setAttribute("stroke-linejoin", "round");
+      pencil.setAttribute("aria-hidden", "true");
+      const mark = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      mark.setAttribute("d", "M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L9 17l-4 1 1-4Z");
+      pencil.append(mark);
+      editButton.append(pencil);
+      if (editable) {
+        editButton.addEventListener("click", () => openUpdateForm(entry));
+      }
+      actionCell.append(editButton);
+      row.append(actionCell);
       rows.append(row);
     }
   }
@@ -284,9 +320,43 @@ function updateOptionalFields() {
 
 function closeAddPanel() {
   addPanel.hidden = true;
+  editingEntry = null;
+  addHeading.textContent = "Add item";
+  submitItemButton.textContent = "Submit";
+  addGroup.disabled = false;
+  addName.readOnly = false;
+  addMonth.disabled = false;
   addStatus.textContent = "";
   addForm.reset();
   submitItemButton.disabled = false;
+}
+
+function openUpdateForm(entry) {
+  if (!activeFolderId || !getDriveToken()) {
+    setWalletMessage("Your session expired. Sign in again to update this item.", true);
+    return;
+  }
+  if (entry.group === "Saving" || entry.month < currentMonth) return;
+
+  addForm.reset();
+  editingEntry = { ...entry };
+  addHeading.textContent = "Update item";
+  submitItemButton.textContent = "Update";
+  addGroup.value = entry.group;
+  addGroup.disabled = true;
+  addName.value = entry.item;
+  addName.readOnly = true;
+  addMonth.min = currentMonth.slice(0, 4) + "-" + currentMonth.slice(4);
+  addMonth.value = entry.month.slice(0, 4) + "-" + entry.month.slice(4);
+  addMonth.disabled = true;
+  addAmount.value = String(entry.amount);
+  addRetail.value = entry.retail || "";
+  addUrl.value = entry.url || "";
+  addRemark.value = entry.remark || "";
+  updateOptionalFields();
+  addStatus.textContent = "";
+  addPanel.hidden = false;
+  addAmount.focus();
 }
 
 addButton.addEventListener("click", () => {
@@ -294,7 +364,7 @@ addButton.addEventListener("click", () => {
     setWalletMessage("Sign in again to add an item to private Drive.", true);
     return;
   }
-  addForm.reset();
+  closeAddPanel();
   addGroup.value = "IN";
   addMonth.min = currentMonth.slice(0, 4) + "-" + currentMonth.slice(4);
   addMonth.value = selectedMonth.slice(0, 4) + "-" + selectedMonth.slice(4);
@@ -315,19 +385,25 @@ addForm.addEventListener("submit", async event => {
   }
   if (!addForm.reportValidity()) return;
   const version = connectionVersion;
+  const previous = editingEntry;
   submitItemButton.disabled = true;
-  addStatus.textContent = "Saving item to private Drive...";
+  addStatus.textContent = previous
+    ? "Appending updated item to its private TXT log..."
+    : "Saving item to private Drive...";
 
   try {
-    const result = await addWalletItem(getDriveToken(), activeFolderId, {
-      group: addGroup.value,
-      item: addName.value,
-      month: addMonth.value.replace("-", ""),
+    const payload = {
+      group: previous ? previous.group : addGroup.value,
+      item: previous ? previous.item : addName.value,
+      month: previous ? previous.month : addMonth.value.replace("-", ""),
       amount: addAmount.value,
       retail: addRetail.value,
       url: addUrl.value,
       remark: addRemark.value
-    });
+    };
+    const result = previous
+      ? await updateWalletItem(getDriveToken(), activeFolderId, { ...payload, previous })
+      : await addWalletItem(getDriveToken(), activeFolderId, payload);
     if (version !== connectionVersion) return;
     selectedMonth = result.month;
     expandedGroups.set(result.group, true);
