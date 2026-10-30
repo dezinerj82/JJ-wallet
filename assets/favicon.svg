@@ -1,10 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Home wallet icon">
-  <rect x="2" y="2" width="60" height="60" rx="15" fill="#24283c"/>
-  <rect x="13" y="16" width="38" height="36" rx="8" fill="#edf6f9" stroke="#ffffff" stroke-width="1.5"/>
-  <path d="M15 25Q15 20 20 20H44Q49 20 49 25V30H15Z" fill="#83c5be"/>
-  <path d="M15 29Q15 24 20 24H44Q49 24 49 29V34H15Z" fill="#ffc857"/>
-  <path d="M15 33Q15 28 20 28H44Q49 28 49 33V38H15Z" fill="#006d77"/>
-  <path d="M15 37Q15 32 20 32H44Q49 32 49 37V42H15Z" fill="#e29578"/>
-  <path d="M13 38H26C29 38 30 42 32 43C34 45 38 45 40 43C42 42 43 38 46 38H51V47C51 51 48 53 44 53H20C16 53 13 51 13 47Z" fill="#ffddd2"/>
-  <path d="M13 38H26C29 38 30 42 32 43C34 45 38 45 40 43C42 42 43 38 46 38H51" stroke="#e29578" stroke-width="1.1" fill="none"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Home wallet green dollar sign">
+  <title>Home wallet</title>
+  <rect x="1" y="1" width="62" height="62" rx="15" fill="#eaf9ef"/>
+  <path d="M32 8V56" fill="none" stroke="#137b3d" stroke-width="6" stroke-linecap="round"/>
+  <path d="M45 19C41 15 36 13 30 13C21 13 16 18 16 25C16 32 23 34 32 36C42 38 48 42 48 48C48 55 41 58 32 58C24 58 18 55 14 51"
+    fill="none" stroke="#16a34a" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
