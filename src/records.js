@@ -347,6 +347,32 @@ export function calculateUnpaidForMonth(allEntries, month) {
   return cents/100;
 }
 
+// "Hold" is guidance only. Never change the saved bill or its payment.
+// Private ranking is not displayed; paid, essential and purchased items
+// cannot be marked for postponement.
+export function suggestedHolds(allEntries, month) {
+  const plan = calculateMonthlyPlan(allEntries, month);
+  const held = new Set();
+  if (plan.balance >= 0) return held;
+  const rows = entriesForMonth(allEntries, month).Bills
+    .filter(row => !row.carryOver && row.month === month &&
+      row.paid === 0 && row.unpaid > 0 &&
+      Number.isInteger(row.meta?.holdPriority) &&
+      row.meta.holdPriority >= 2 && row.meta.holdPriority <= 5)
+    .sort((a,b) =>
+      b.meta.holdPriority - a.meta.holdPriority ||
+      b.unpaid - a.unpaid ||
+      a.item.localeCompare(b.item)
+    );
+  let deficit = Math.round(-plan.balance*100);
+  for (const row of rows) {
+    if (deficit <= 0) break;
+    held.add(JSON.stringify([row.group,row.item,row.month]));
+    deficit -= Math.round(row.unpaid*100);
+  }
+  return held;
+}
+
 export function monthKey(date) {
   return String(date.getFullYear()) + String(date.getMonth() + 1).padStart(2, "0");
 }
