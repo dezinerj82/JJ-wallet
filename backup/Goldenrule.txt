@@ -67,7 +67,10 @@ WALLET ACCESS PROCESS
 
 MAIN VIEW
 - One month-based consolidated table with collapsible groups and item details.
-- Navigate current and upcoming planning months.
+- Keep the primary monthly table on the current month.
+- A separate Other months comparison view navigates earlier and future months independently without changing the primary table.
+- The comparison uses the same item data, group contents, details and valid Update actions; historical periods remain read-only.
+- New or amended records refresh both views from the same confirmed storage data.
 - Display income, planned dues, protected/accessible saved balances and alerts.
 - Maintain a separate live list of outstanding Others items.
 - Work cleanly on mobile and desktop browsers.
