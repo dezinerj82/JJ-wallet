@@ -960,18 +960,18 @@ export async function importWalletSetup(token, folderId, source, onProgress = ()
 
     // Opening balances are private settings, never fabricated ledger deposits.
 
-    if (entry.record) {
+    if (entry.record && entry.record.amount > 0) {
       // A manually edited or deleted month must never be restored by setup.
       const history = existing + (existing && !existing.endsWith("\n") ? "\n" : "") + lines;
       const already = history.split("\n").some(line => {
         const cells = line.replace(/\r$/, "").split("\t");
         return cells[0] === entry.group &&
           String(cells[1] || "").toLocaleLowerCase("en") ===
-            entry.item.toLocaleLowerCase("en") && cells[2] === input.month;
+            entry.item.toLocaleLowerCase("en") && cells[2] === entry.record.month;
       });
       if (!already) {
         const money = entry.record.amount.toFixed(2);
-        const values = [entry.group, entry.item, input.month, money];
+        const values = [entry.group, entry.item, entry.record.month, money];
         if (entry.group !== "IN") values.push("0.00", money);
         lines += values.join("\t") + "\n";
       }
@@ -979,13 +979,37 @@ export async function importWalletSetup(token, folderId, source, onProgress = ()
 
     // Never replace the user's own metadata or schedules during an import.
     // Every metadata change remains a regular user-initiated settings edit.
-    if ((entry.meta || entry.openingBalance !== undefined) &&
-        !lastMeta(existing, entry.group, entry.item)) {
-      lines += metaLine(buildMeta(entry.group, entry.item, {
+    if (entry.meta || entry.openingBalance !== undefined) {
+      const savedMeta = lastMeta(existing, entry.group, entry.item);
+      const incoming = {
         ...(entry.meta || {}),
         ...(entry.openingBalance !== undefined
           ? { openingBalance: entry.openingBalance } : {})
-      }));
+      };
+      if (!savedMeta) {
+        lines += metaLine(buildMeta(entry.group, entry.item, incoming));
+      } else {
+        // Upgrade missing, older private settings only. Re-importing must
+        // never replace manually chosen note, amount, or priority settings.
+        const savedRaw = existing.split("\n")
+          .filter(line => line.startsWith("@META\t")).at(-1) || "";
+        const merged = {...savedMeta};
+        if (entry.group === "Saving" && incoming.adjustableSaving === true &&
+            !savedRaw.includes('"adjustableSaving"')) {
+          merged.adjustableSaving = true;
+        }
+        if (entry.group === "Bills" && Number.isInteger(incoming.holdPriority) &&
+            !savedRaw.includes('"holdPriority"')) {
+          merged.holdPriority = incoming.holdPriority;
+        }
+        if (entry.group === "Saving" && incoming.openingBalance !== undefined &&
+            savedMeta.openingBalance == null) {
+          merged.openingBalance = incoming.openingBalance;
+        }
+        if (JSON.stringify(merged) !== JSON.stringify(savedMeta)) {
+          lines += metaLine(buildMeta(entry.group, entry.item, merged));
+        }
+      }
     }
     if (entry.schedule) {
       const prior = lastSchedule(existing, entry.group, entry.item);
