@@ -203,7 +203,7 @@ export function entriesForMonth(allEntries, month) {
       if (amount <= 0) continue;
       groups[entry.group].push({
         ...entry, month, carryOver: true, carryFrom: entry.month,
-        amount, paid: 0, unpaid: amount,
+        amount, paid: 0, unpaid: amount, settlements: [],
         remark: "From " + formatMonth(entry.month)
       });
     }
