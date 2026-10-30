@@ -1,10 +1,12 @@
 import { parseRecurringDirective } from "./recurring.js";
+import { WALLET_GROUPS, isWalletGroup, isExpenseGroup, availableGroups } from "./groups.js";
+import { parseMetaLine, metaKey } from "./private-meta.js";
 
 // Pure read-only wallet record parsing. No financial records are stored in GitHub.
 // Item TXT lines are tab-separated. Last valid entry for an item/month wins.
 // Planning balance uses current saved items only; automatic carry-forward is not enabled yet.
 
-export const WALLET_GROUPS = Object.freeze(["IN", "Saving", "Bills", "Others"]);
+export { WALLET_GROUPS };
 const MONTH_RE = /^(?:19|20|21)\d{2}(?:0[1-9]|1[0-2])$/;
 const AMOUNT_RE = /^(?:0|[1-9]\d{0,11})(?:\.\d{1,2})?$/;
 
@@ -21,7 +23,7 @@ function parseLine(line) {
   const group = fields[0] === "Other" ? "Others" : fields[0];
   const item = fields[1]?.trim();
   const month = fields[2];
-  if (!WALLET_GROUPS.includes(group) || !item || item.length > 180 ||
+  if (!isWalletGroup(group) || !item || item.length > 180 ||
       !MONTH_RE.test(month) || /[\u0000-\u001f]/.test(item)) {
     return null;
   }
@@ -29,7 +31,7 @@ function parseLine(line) {
   // Deletion is an append-only tombstone for ONE group/item/month.
   // It overrides the previous month's snapshot without erasing its history.
   if (fields.length === 4 && fields[3] === "DELETE" &&
-      (group === "IN" || group === "Bills" || group === "Others")) {
+      group !== "Saving") {
     return { group, item, month, deleted: true };
   }
 
@@ -46,7 +48,7 @@ function parseLine(line) {
       ? null : { group, item, month, added, withdrawn, balance, remark: fields[6] || "" };
   }
 
-  if ((group === "Bills" || group === "Others") && fields.length >= 6) {
+  if (isExpenseGroup(group) && fields.length >= 6) {
     const amount = safeAmount(fields[3]);
     const paid = safeAmount(fields[4]);
     const unpaid = safeAmount(fields[5]);
@@ -64,6 +66,7 @@ export function parseWalletFiles(files) {
   if (!Array.isArray(files)) throw new TypeError("Expected wallet TXT files.");
   const byMonth = new Map();
   const repeatRules = new Map();
+  const metadata = new Map();
   let validLines = 0;
   let invalidLines = 0;
 
@@ -75,6 +78,16 @@ export function parseWalletFiles(files) {
 
     for (const line of file.content.split("\n")) {
       if (!line.trim()) continue;
+      if (line.startsWith("@META\t")) {
+        const meta = parseMetaLine(line);
+        if (meta) {
+          metadata.set(metaKey(meta.group, meta.item), meta);
+          validLines++;
+        } else {
+          invalidLines++;
+        }
+        continue;
+      }
       if (line.startsWith("@RECUR\t")) {
         const rule = parseRecurringDirective(line);
         if (!rule) {
@@ -99,16 +112,20 @@ export function parseWalletFiles(files) {
   return {
     entries: Array.from(byMonth.values())
       .filter(entry => !entry.deleted)
-      .map(entry => entry.group === "Bills"
-        ? { ...entry, recurring: repeatRules.get(entry.item.toLocaleLowerCase("en")) === true }
-        : entry),
+      .map(entry => ({
+        ...entry,
+        ...(entry.group === "Bills"
+          ? { recurring: repeatRules.get(entry.item.toLocaleLowerCase("en")) === true } : {}),
+        meta: metadata.get(metaKey(entry.group, entry.item)) || null
+      })),
     validLines, invalidLines
   };
 }
 
 export function entriesForMonth(allEntries, month) {
   if (!MONTH_RE.test(month)) throw new Error("Invalid month.");
-  const groups = Object.fromEntries(WALLET_GROUPS.map(group => [group, []]));
+  const groupList = availableGroups(allEntries);
+  const groups = Object.fromEntries(groupList.map(group => [group, []]));
   const latestSavings = new Map();
 
   for (const entry of allEntries) {
@@ -123,7 +140,7 @@ export function entriesForMonth(allEntries, month) {
   }
 
   groups.Saving = [...latestSavings.values()];
-  for (const group of WALLET_GROUPS) {
+  for (const group of groupList) {
     groups[group].sort((a, b) => a.item.localeCompare(b.item));
   }
   return groups;
@@ -150,11 +167,15 @@ export function calculateMonthlyBalance(allEntries, month) {
   const income = sumCents(groups.IN, "amount");
   const bills = sumCents(groups.Bills, "amount");
   const others = sumCents(groups.Others, "amount");
+  const custom = availableGroups(allEntries).filter(isExpenseGroup)
+    .filter(group => group !== "Bills" && group !== "Others")
+    .reduce((total, group) => total + sumCents(groups[group], "amount"), 0);
+  if (!Number.isSafeInteger(custom)) throw new Error("Balance exceeds the safe limit.");
   // entriesForMonth carries the last savings balance forward for display.
   // Never count that balance or historical additions as this month's cost.
   const currentSavings = groups.Saving.filter(entry => entry.month === month);
   const saving = sumCents(currentSavings, "added");
-  const totalExpenses = bills + others + saving;
+  const totalExpenses = bills + others + saving + custom;
   if (!Number.isSafeInteger(totalExpenses) ||
       !Number.isSafeInteger(income - totalExpenses)) {
     throw new Error("The monthly balance could not be calculated safely.");
