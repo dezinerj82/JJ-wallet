@@ -124,6 +124,7 @@ export function formatAmount(value) {
   // Remove trailing .00 in the UI, while keeping meaningful cents.
   // TXT log values retain their original two-decimal precision.
   return new Intl.NumberFormat("en-MY", {
+    useGrouping: false,
     minimumFractionDigits: 0, maximumFractionDigits: 2
   }).format(value);
 }
