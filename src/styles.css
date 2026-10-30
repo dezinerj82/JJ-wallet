@@ -634,10 +634,13 @@ select:focus-visible {
 
 
 /* On larger displays, both months can be seen side by side. */
-@media (min-width: 1380px) {
+@media (min-width: 1260px) {
   body.other-months-open main {
     max-width: calc(50vw - 1.7rem);
     margin-left: 1.25rem;
     margin-right: auto;
+  }
+  body.other-months-open main .wallet-table {
+    min-width: 33.5rem;
   }
 }
