@@ -91,20 +91,22 @@ function showUnauthorized(email) {
 }
 
 async function checkFolder() {
-  driveStatus.textContent = "Looking for your private Bills folder...";
+  driveStatus.textContent = "Looking for your private Wallet bills folder...";
   const folder = await findBillsFolder(getDriveToken());
   if (!getDriveToken()) throw new Error("Google Drive session expired. Reconnect Google Drive.");
   if (!folder) {
     activeFolderId = null;
     testStorageButton.hidden = true;
     driveStatus.textContent =
-      "Bills folder not found. If you moved it, check access and reconnect; no new folder was created.";
+      "Wallet bills folder not found. If you moved it, check access and reconnect; no new folder was created.";
     return;
   }
-  // The folder is recognized by its app marker, even after moving it under Github/Bills.
+  // The folder is recognized by its app marker, even after moving or renaming it.
   activeFolderId = folder.id;
   testStorageButton.hidden = false;
-  driveStatus.textContent = "Google Drive connected. Bills folder found.";
+  driveStatus.textContent = folder.name === "Wallet bills"
+    ? "Google Drive connected. Wallet bills folder found."
+    : "Drive connected to existing folder: " + folder.name + ". Rename it to Wallet bills in Drive.";
 }
 
 async function onDriveReady() {
@@ -151,7 +153,7 @@ connectButton.addEventListener("click", () => {
 
 testStorageButton.addEventListener("click", async () => {
   if (!activeFolderId) {
-    driveStatus.textContent = "Connect the private Bills folder first.";
+    driveStatus.textContent = "Connect the private Wallet bills folder first.";
     return;
   }
   testStorageButton.disabled = true;
