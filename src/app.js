@@ -303,6 +303,8 @@ function resetWallet() {
   withdrawApproved = false;
   savingsPanel.hidden = true;
   editingSavings = null;
+  payPanel.hidden = true;
+  payingEntry = null;
   if (walletDialog.open) walletDialog.close("cancel");
   hideItemTooltip();
   walletBalanceReady = false;
@@ -588,6 +590,15 @@ function renderTable(month, target, groupStates, fromComparison = false) {
         });
       }
       actionCell.append(editButton);
+      if (month === currentMonth && entry.group !== "IN" &&
+          entry.group !== "Saving" && entry.unpaid > 0) {
+        const payButton = document.createElement("button");
+        payButton.type = "button";
+        payButton.className = "pay-item-button";
+        payButton.textContent = "Pay";
+        payButton.addEventListener("click", () => openPayPanel(entry));
+        actionCell.append(payButton);
+      }
       row.append(actionCell);
       rows.append(row);
     }
@@ -943,6 +954,7 @@ function openUpdateForm(entry) {
   }
   if (entry.group === "Saving" || entry.month < currentMonth) return;
   closeSavingSettings();
+  closePayPanel();
 
   addForm.reset();
   editingEntry = { ...entry };
@@ -973,6 +985,52 @@ function openUpdateForm(entry) {
   addAmount.focus();
 }
 
+function closePayPanel() {
+  payPanel.hidden = true;
+  payingEntry = null;
+  payStatus.textContent = "";
+  payForm.reset();
+}
+
+function openPayPanel(entry) {
+  if (!activeFolderId || !getDriveToken() || entry.month !== currentMonth) return;
+  closeAddPanel();
+  closeSavingSettings();
+  payingEntry = {...entry};
+  payName.textContent = entry.item +
+    (entry.carryOver ? " · From " + formatMonth(entry.carryFrom) : "");
+  payAmount.max = String(entry.unpaid);
+  payAmount.value = String(entry.unpaid);
+  payStatus.textContent = "";
+  payPanel.hidden = false;
+  payAmount.focus();
+}
+
+payCancel.addEventListener("click", closePayPanel);
+payForm.addEventListener("submit", async event => {
+  event.preventDefault();
+  if (!payingEntry || !activeFolderId || !getDriveToken() ||
+      !payForm.reportValidity()) return;
+  const previous = payingEntry;
+  const version = connectionVersion;
+  paySave.disabled = true;
+  payCancel.disabled = true;
+  payStatus.textContent = "";
+  try {
+    await recordBillPayment(getDriveToken(),activeFolderId,previous,payAmount.value);
+    if (version !== connectionVersion) return;
+    closePayPanel();
+    await loadWalletRecords("Refreshing...");
+  } catch(error) {
+    if (version === connectionVersion) {
+      payStatus.textContent = error.message || "Couldn't save payment.";
+    }
+  } finally {
+    paySave.disabled = false;
+    payCancel.disabled = false;
+  }
+});
+
 function closeSavingSettings() {
   savingsPanel.hidden = true;
   editingSavings = null;
@@ -988,6 +1046,7 @@ function openSavingSettings(entry) {
     return;
   }
   closeAddPanel();
+  closePayPanel();
   editingSavings = { ...latest };
   savingsName.textContent = latest.item;
   savingsAccessible.checked = latest.meta?.access === "accessible";
@@ -1091,6 +1150,7 @@ addButton.addEventListener("click", () => {
     return;
   }
   closeAddPanel();
+  closePayPanel();
   savingsPanel.hidden = true;
   editingSavings = null;
   populateCategoryChoices();
