@@ -150,6 +150,7 @@ export function parseWalletFiles(files) {
       ...entry,
       ...(entry.group === "Bills"
         ? { recurring: repeatRules.get(entry.item.toLocaleLowerCase("en")) === true } : {}),
+      scheduled: schedules.get(metaKey(entry.group, entry.item))?.active === true,
       meta: metadata.get(metaKey(entry.group, entry.item)) || null
     })),
     catalog: [...directory.values()],
