@@ -85,7 +85,12 @@ ADD / EDIT / REMOVE FORM
 - Submit updates the corresponding item log and month table.
 - Empty groups display a simple No items row instead of looking broken.
 - Add may create IN, Bills and Others entries for the current or future months, only after explicit submission; for existing items it may append a new month while preserving historical lines.
-- A second Add for the same item/month is refused until the edit flow is available.
+- A second Add for the same item/month is refused; use Update to amend the existing month instead.
+- Update is available for open-month IN, Bills and Others item rows and appends a new complete snapshot to the same item TXT log without deleting previous lines.
+- A stale Update must be refused if the item's current saved snapshot differs from the loaded record.
+- Updating a bill or Others item preserves the amount already paid, recalculates the remaining unpaid amount, and refuses a revised charge below the amount paid.
+- Protected and accessible savings balances are not directly editable through the ordinary item Update control; their changes belong to the separate savings/payment process.
+- Readable amount displays omit trailing zero decimals while preserving nonzero cents and exact values in the TXT logs.
 - New Bills and Others obligations start unpaid; actual payment updates are handled separately.
 - Saving entry creation is deferred until the payment flow can safely commit allocations and balances.
 - Optional retail, URL and remark for Others are appended as trailing tab-delimited fields after the core payment fields.
