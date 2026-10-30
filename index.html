@@ -16,8 +16,13 @@
       <button type="button" id="login-button" disabled>Sign in with Google</button>
       <div id="signed-in-view" hidden>
         <p id="signed-in-account"></p>
-        <p>You're signed in. Financial records are not connected yet.</p>
-        <button type="button" id="logout-button">Sign out</button>
+        <p>Wallet records are not enabled yet. First, verify your private Drive folder.</p>
+        <p id="drive-status" role="status" aria-live="polite">Google Drive is not connected.</p>
+        <button type="button" id="connect-drive-button">Connect Google Drive</button>
+        <button type="button" id="create-folder-button" hidden>Create bills folder</button>
+        <div class="action-row">
+          <button type="button" id="logout-button">Sign out</button>
+        </div>
       </div>
     </section>
   </main>
