@@ -837,7 +837,9 @@ export async function saveSavingSettings(token, folderId, previous, input) {
     throw new Error("Savings changed. Press Refresh.");
   }
   const meta = buildMeta("Saving", previous.item, {
-    ...input, access: input?.access === "accessible" ? "accessible" : "protected",
+    ...input,
+    openingBalance: previous.meta?.openingBalance ?? null,
+    access: input?.access === "accessible" ? "accessible" : "protected",
     interval: 0, remindBefore: 0, lastService: ""
   });
   const old = lastMeta(existing.text, "Saving", previous.item);
@@ -948,18 +950,7 @@ export async function importWalletSetup(token, folderId, source, onProgress = ()
       lines += itemMarkerLine(entry.group, entry.item);
     }
 
-    if (entry.group === "Saving" && entry.openingBalance !== undefined) {
-      const oldSaving = existing.split("\n").some(line => {
-        const fields = line.replace(/\r$/, "").split("\t");
-        return fields[0] === "Saving" &&
-          String(fields[1] || "").toLocaleLowerCase("en") === entry.item.toLocaleLowerCase("en") &&
-          /^(?:19|20|21)\d{2}(?:0[1-9]|1[0-2])$/.test(fields[2]);
-      });
-      if (!oldSaving) {
-        lines += ["Saving", entry.item, input.month, "0.00", "0.00",
-          entry.openingBalance.toFixed(2)].join("\t") + "\n";
-      }
-    }
+    // Opening balances are private settings, never fabricated ledger deposits.
 
     if (entry.record) {
       // A manually edited or deleted month must never be restored by setup.
@@ -980,8 +971,13 @@ export async function importWalletSetup(token, folderId, source, onProgress = ()
 
     // Never replace the user's own metadata or schedules during an import.
     // Every metadata change remains a regular user-initiated settings edit.
-    if (entry.meta && !lastMeta(existing, entry.group, entry.item)) {
-      lines += metaLine(buildMeta(entry.group, entry.item, entry.meta));
+    if ((entry.meta || entry.openingBalance !== undefined) &&
+        !lastMeta(existing, entry.group, entry.item)) {
+      lines += metaLine(buildMeta(entry.group, entry.item, {
+        ...(entry.meta || {}),
+        ...(entry.openingBalance !== undefined
+          ? { openingBalance: entry.openingBalance } : {})
+      }));
     }
     if (entry.schedule) {
       const prior = lastSchedule(existing, entry.group, entry.item);
