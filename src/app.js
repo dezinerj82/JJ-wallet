@@ -119,7 +119,7 @@ function showSignedIn() {
   selectingAccountRequired = false;
   loginView.hidden = true;
   walletView.hidden = false;
-  setWalletMessage("Checking private Drive storage...");
+  setWalletMessage("Opening wallet...");
   monthLabel.textContent = formatMonth(selectedMonth);
   prevButton.disabled = true;
 }
@@ -194,21 +194,9 @@ function renderMonth() {
       const value = entry.group === "Saving" ? entry.balance : entry.amount;
       addTextCell(row, formatAmount(value), "wallet-amount");
 
-      let description = "";
-      if (entry.group === "Saving") {
-        description = "Last recorded balance: " + formatMonth(entry.month);
-      } else if (entry.group === "Bills" || entry.group === "Others") {
-        description = "Paid: " + formatAmount(entry.paid) +
-          " · Unpaid: " + formatAmount(entry.unpaid);
-        if (entry.group === "Others") {
-          if (entry.retail) description += " · Retail: " + entry.retail;
-          if (entry.remark) description += " · " + entry.remark;
-          if (entry.url) description += " · " + entry.url;
-        }
-      } else {
-        description = "Recorded income";
-      }
-      addTextCell(row, description, "wallet-detail");
+      // Details are only the user's own remark. Payment and storage data
+      // remain in the item record but aren't presented as log messages.
+      addTextCell(row, entry.remark || "—", "wallet-detail");
 
       const actionCell = document.createElement("td");
       actionCell.className = "wallet-update-cell";
@@ -252,7 +240,7 @@ async function loadWalletRecords() {
   walletView.hidden = false;
   walletTableWrap.hidden = true;
   refreshButton.disabled = true;
-  setWalletMessage("Reading wallet records...");
+  setWalletMessage("Loading items...");
 
   try {
     const files = await readWalletTextFiles(getDriveToken(), folderId);
@@ -263,8 +251,8 @@ async function loadWalletRecords() {
     walletTableWrap.hidden = false;
     if (parsed.invalidLines) {
       setWalletMessage(
-        "Some TXT rows could not be read (" + parsed.invalidLines +
-        "). Only valid records are shown. Review your files.", true
+        "Some saved items couldn't be displayed (" + parsed.invalidLines +
+        "). Please check your records.", true
       );
     } else {
       setWalletMessage("");
@@ -310,11 +298,10 @@ function updateOptionalFields() {
   const others = addGroup.value === "Others";
   addRetailField.hidden = !others;
   addUrlField.hidden = !others;
-  addRemarkField.hidden = !others;
+  addRemarkField.hidden = false;
   if (!others) {
     addRetail.value = "";
     addUrl.value = "";
-    addRemark.value = "";
   }
 }
 
@@ -361,7 +348,7 @@ function openUpdateForm(entry) {
 
 addButton.addEventListener("click", () => {
   if (!activeFolderId || !getDriveToken()) {
-    setWalletMessage("Sign in again to add an item to private Drive.", true);
+    setWalletMessage("Please sign in again to add an item.", true);
     return;
   }
   closeAddPanel();
@@ -380,16 +367,14 @@ cancelItemButton.addEventListener("click", closeAddPanel);
 addForm.addEventListener("submit", async event => {
   event.preventDefault();
   if (!activeFolderId || !getDriveToken()) {
-    addStatus.textContent = "Your Google Drive session has expired. Please sign in again.";
+    addStatus.textContent = "Your session has expired. Please sign in again.";
     return;
   }
   if (!addForm.reportValidity()) return;
   const version = connectionVersion;
   const previous = editingEntry;
   submitItemButton.disabled = true;
-  addStatus.textContent = previous
-    ? "Appending updated item to its private TXT log..."
-    : "Saving item to private Drive...";
+  addStatus.textContent = previous ? "Updating..." : "Saving...";
 
   try {
     const payload = {
