@@ -24,6 +24,13 @@ function parseLine(line) {
     return null;
   }
 
+  // Deletion is an append-only tombstone for ONE group/item/month.
+  // It overrides the previous month's snapshot without erasing its history.
+  if (fields.length === 4 && fields[3] === "DELETE" &&
+      (group === "IN" || group === "Bills" || group === "Others")) {
+    return { group, item, month, deleted: true };
+  }
+
   if (group === "IN" && fields.length >= 4) {
     const amount = safeAmount(fields[3]);
     return amount === null ? null : { group, item, month, amount, remark: fields[4] || "" };
@@ -76,7 +83,10 @@ export function parseWalletFiles(files) {
     }
   }
 
-  return { entries: Array.from(byMonth.values()), validLines, invalidLines };
+  return {
+    entries: Array.from(byMonth.values()).filter(entry => !entry.deleted),
+    validLines, invalidLines
+  };
 }
 
 export function entriesForMonth(allEntries, month) {
