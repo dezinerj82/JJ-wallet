@@ -168,7 +168,8 @@ select:focus-visible {
   font-weight: 500;
 }
 /* Matching visual weight across the entire action row: aqua, gold, coral and indigo. */
-#other-months-button {
+#other-months-button,
+#wallet-setup-button {
   --btn-bg: #a8b1df;
   --btn-hover: #929dd2;
   --btn-text: #253068;
