@@ -1,6 +1,7 @@
 import { parseRecurringDirective } from "./recurring.js";
 import { WALLET_GROUPS, isWalletGroup, isExpenseGroup, availableGroups } from "./groups.js";
 import { parseMetaLine, metaKey } from "./private-meta.js";
+import { parseItemMarker, parseScheduleLine } from "./setup.js";
 
 // Pure read-only wallet record parsing. No financial records are stored in GitHub.
 // Item TXT lines are tab-separated. Last valid entry for an item/month wins.
@@ -67,6 +68,8 @@ export function parseWalletFiles(files) {
   const byMonth = new Map();
   const repeatRules = new Map();
   const metadata = new Map();
+  const directory = new Map();
+  const schedules = new Map();
   let validLines = 0;
   let invalidLines = 0;
 
@@ -78,6 +81,22 @@ export function parseWalletFiles(files) {
 
     for (const line of file.content.split("\n")) {
       if (!line.trim()) continue;
+      if (line.startsWith("@ITEM\t")) {
+        const found = parseItemMarker(line);
+        if (found) {
+          directory.set(metaKey(found.group, found.item), found);
+          validLines++;
+        } else invalidLines++;
+        continue;
+      }
+      if (line.startsWith("@SCHEDULE\t")) {
+        const found = parseScheduleLine(line);
+        if (found) {
+          schedules.set(metaKey(found.group, found.item), found);
+          validLines++;
+        } else invalidLines++;
+        continue;
+      }
       if (line.startsWith("@META\t")) {
         const meta = parseMetaLine(line);
         if (meta) {
@@ -106,18 +125,33 @@ export function parseWalletFiles(files) {
       validLines++;
       const key = JSON.stringify([entry.group, entry.item, entry.month]);
       byMonth.set(key, entry);
+      directory.set(metaKey(entry.group, entry.item), {
+        group: entry.group, item: entry.item
+      });
     }
   }
 
+  const active = Array.from(byMonth.values()).filter(entry => !entry.deleted);
+  // A savings target can exist even when its confirmed balance is unknown.
+  // Display the target with an unknown balance, never an invented RM0 record.
+  for (const found of directory.values()) {
+    if (found.group !== "Saving" || active.some(entry =>
+      entry.group === "Saving" && entry.item.toLocaleLowerCase("en") ===
+        found.item.toLocaleLowerCase("en"))) continue;
+    active.push({
+      group:"Saving", item: found.item, month:"190001",
+      added:0, withdrawn:0, balance:null, remark:"", catalogOnly:true
+    });
+  }
   return {
-    entries: Array.from(byMonth.values())
-      .filter(entry => !entry.deleted)
-      .map(entry => ({
-        ...entry,
-        ...(entry.group === "Bills"
-          ? { recurring: repeatRules.get(entry.item.toLocaleLowerCase("en")) === true } : {}),
-        meta: metadata.get(metaKey(entry.group, entry.item)) || null
-      })),
+    entries: active.map(entry => ({
+      ...entry,
+      ...(entry.group === "Bills"
+        ? { recurring: repeatRules.get(entry.item.toLocaleLowerCase("en")) === true } : {}),
+      meta: metadata.get(metaKey(entry.group, entry.item)) || null
+    })),
+    catalog: [...directory.values()],
+    schedules: [...schedules.values()],
     validLines, invalidLines
   };
 }
