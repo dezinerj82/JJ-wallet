@@ -133,7 +133,10 @@ export function parseWalletCsv(text, today = new Date()) {
     if (data.RemindBefore && !data.Repeat) meta.remindBefore =
       exactInteger(data.RemindBefore,"RemindBefore",[0,1,2]);
     if (group === "Saving") {
-      if (savings !== null) meta.monthlySaving = savings;
+      if (savings !== null) {
+        meta.monthlySaving = savings;
+        meta.savingFromMonth = rowMonth;
+      }
       if (data.AdjustableSaving) meta.adjustableSaving = bool(data.AdjustableSaving,"AdjustableSaving");
       if (data.AllowWithdrawal) meta.access =
         bool(data.AllowWithdrawal,"AllowWithdrawal") ? "accessible" : "protected";
