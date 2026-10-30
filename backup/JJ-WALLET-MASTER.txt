@@ -1,0 +1,140 @@
+HOME WALLET — ACTIVE PROCESS REFERENCE
+
+SCOPE
+This file documents wallet process logic and functional requirements only.
+Do not include personal names, real or sample amounts, example financial data, account identifiers, external platform configuration, retired requirements or design mockups.
+Consult application source files for current UI design and implementation.
+Keep README.md empty.
+
+GROUPS
+IN: recurring or manually entered spendable income items.
+Saving: protected and accessible savings items.
+Bills: recurring, variable and periodic obligations.
+Others: custom payees or purchases, organised by item rather than subfolders.
+
+INCOME
+- Support repeating default values until manually changed.
+- Support irregular income entered only when confirmed.
+- Store month-specific amounts, including explicit zero when nothing arrives.
+- Combine applicable income for the selected planning month.
+- No cumulative balance tracking for individual income items.
+
+SAVING
+- Transfer planned allocations from IN into savings during monthly payment processing.
+- Allocations are deducted from spendable income, and credited once to the relevant savings balance.
+- Protected savings permit allocations and balance tracking but NEVER withdrawals or bill funding.
+- Accessible savings permit explicit withdrawals only from already confirmed saved funds.
+- Future or uncommitted allocations must not be made available for withdrawals.
+- Carry the last confirmed savings balance into the next month.
+- Balance = last confirmed balance + committed savings additions - confirmed withdrawals.
+- Savings balances remain separate from ordinary spendable income.
+
+BILLS
+- Recurring charges may be fixed, calendar-calculated, variable or contract-dependent.
+- Periodic charges appear only in configured due months, with reminders.
+- Others accepts new individual items, optional shop information, URL and remarks.
+- Multiple charges against an existing Others item accumulate under that same item.
+- Paid and unpaid portions are tracked; bills do not need ongoing account balances.
+- Any unpaid remainder carries to the following month under its original item/category.
+- If an existing group/item cannot be matched, place the carried item under Others.
+- Never count a carried amount twice or duplicate it when a new monthly charge is added.
+
+SALARY / MONTHLY FORECAST
+- Salary is normally received on the last working day of the month.
+- The salary received in an active month supports settlement for that month and spending until the following salary.
+- Store period identifiers as YYYYMM.
+- Set A = total spendable IN entries applicable to the active month.
+- Set B = savings allocations + current Bills + Others + outstanding carry-forward, counted once.
+- Forecast = Set A minus Set B.
+- Forecast is a planning estimate, NOT actual bank balance.
+- Do not require tracking actual bank balances or a post-payment spending balance.
+- A change to an open month's entries immediately updates the forecast.
+- Warn about insufficient forecast funding.
+- Alert on upcoming periodic and Others items.
+
+MAIN VIEW
+- One month-based consolidated table with collapsible groups and item details.
+- Navigate current and upcoming planning months.
+- Display income, planned dues, protected/accessible saved balances and alerts.
+- Maintain a separate live list of outstanding Others items.
+- Work cleanly on mobile and desktop browsers.
+- No charts.
+
+ADD / EDIT / REMOVE FORM
+- Category: choose an existing group/item or add a new item.
+- Date: select the current or a future payment month; allow typed dates converted to YYYYMM.
+- Amount: numeric MYR, without a currency prefix in the entry field.
+- Retail: shown only for Others.
+- Remark: optional text.
+- Others may also store a URL to the shop or item.
+- Submit and Cancel must both be available even when fields are empty.
+- Cancel returns to the prior screen, with no save.
+- Submit updates the corresponding item log and month table.
+- Incomplete submissions must not corrupt calculations; the precise safe representation is pending.
+- Amendments append revised log entries; historical lines remain preserved.
+- Do not edit completed previous months.
+
+START PAYMENT
+- Start Payment loads the active month's planned income, allocations and payable obligations.
+- Display bills for full, partial or unpaid selection and review.
+- Regular spendable funds are the default payment source.
+- Using accessible saved funds is deliberate, never automatic, and is limited to confirmed savings.
+- Never offer protected savings as a payment source.
+- Extra human-error prevention controls are still to be designed.
+
+END PAYMENT
+- End Payment finalises a month once, even if pressed repeatedly or the page reloads.
+- Apply confirmed paid/unpaid results and savings contributions exactly once.
+- Transfer only unpaid balances into the next month's matching item/category.
+- If an item does not match an existing category, group it in Others.
+- Combine new Others charges with outstanding amounts without duplication.
+- Append all relevant log updates and retain historical records.
+- Confirm all storage writes finished successfully BEFORE marking a month completed.
+- Failed or partially saved processing must be recoverable and safe to retry.
+- On successful completion, close that month and open the next month.
+- Completed months are not reopened for corrections.
+- A correction affecting a completed payment is recorded as an adjustment to the following month's outstanding obligation.
+
+USE SAVINGS
+- Provide a separate accessible-reserve withdrawal action.
+- Form: Item, Payment Month, Amount, Remark, Submit.
+- Protected savings cannot be selected.
+- Allow only the amount already confirmed saved, not a future monthly allocation.
+- After a confirmed save, append a withdrawal record and update the savings balance.
+
+RECORDS / STORAGE
+- Single private storage folder named bills.
+- One plain UTF-8 .txt file per unique item, containing all applicable months.
+- No category subfolders and no separate file for each month.
+- Text lines are tab-separated, with YYYYMM month values.
+- IN fields: MainCategory, Item, Month, Amount.
+- Saving fields: MainCategory, Item, Month, Added, Withdrawn, Balance.
+- Bills/Other fields: MainCategory, Item, Month, BillAmount, Paid, Unpaid.
+- Additional fields for retail, URL and remark must remain compatible with the final agreed schema.
+- Append all changes instead of erasing past records.
+- The LAST valid row for a specific item/month is the effective state for that month.
+- A later version of an existing record is not a second charge.
+- Additional charges for an Others item must be represented as a revised cumulative amount or explicitly identified new charge events, not as accidental double-counted snapshots.
+- Keep explicit zero-activity month records where needed to identify gaps.
+- Keep savings balance history permanently.
+- Keep inactive/completed payment history in append-only logs, while hiding completed past months from the active table.
+- If an individual item file exceeds the agreed size threshold, continue its history in a second indexed segment; treat all segments as one continuous log.
+- Maintain a separate backup/export ability and verify each save.
+
+SHAREABLE OUTSTANDING SUMMARY
+- Export the active and following month's unpaid/expected items, due months and totals.
+- The summary supports requesting additional household funds.
+- Exact export file format is undecided.
+
+PROCESS RULES PENDING DESIGN
+- The detailed Start Payment review and human-error checks.
+- Safe blank/incomplete record handling and deletion marker semantics.
+- Final optional retail/URL/remark field encoding.
+- Export format.
+- File segmentation and partial-write recovery behavior.
+
+DOCUMENT MAINTENANCE
+- Keep only active process decisions and unresolved process requirements here.
+- Remove replaced/retired instructions rather than accumulating old versions.
+- Do not record private identifiers, real or example figures, personal names or platform account configuration.
+- Refer to website source files for design and appearance.
