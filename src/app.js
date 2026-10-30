@@ -683,18 +683,121 @@ async function onDriveReady() {
 }
 
 
+function populateCategoryChoices() {
+  const prior = addGroup.value;
+  for (const option of [...addGroup.options]) {
+    if (option.dataset.extra === "true") option.remove();
+  }
+  const anchor = addGroup.querySelector('option[value="Withdraw"]');
+  for (const category of availableGroups(walletEntries)) {
+    if (!isCustomGroup(category)) continue;
+    const option = new Option(category, category);
+    option.dataset.extra = "true";
+    addGroup.insertBefore(option, anchor);
+  }
+  addGroup.value = [...addGroup.options].some(option => option.value === prior)
+    ? prior : "IN";
+}
+
+function activeAddCategory() {
+  return addGroup.value === NEW_CATEGORY
+    ? addCategoryName.value.trim() : addGroup.value;
+}
+
+function populateItemChoices(previous = "") {
+  if (editingEntry) return;
+  const group = activeAddCategory();
+  const isWithdrawal = group === "Withdraw";
+  const names = isWithdrawal
+    ? entriesForMonth(walletEntries, currentMonth).Saving
+      .filter(entry => entry.meta?.access === "accessible")
+      .map(entry => entry.item)
+    : walletEntries.filter(entry => entry.group === group).map(entry => entry.item);
+  const unique = [...new Set(names)].sort((a, b) => a.localeCompare(b));
+  addItemSelect.replaceChildren();
+  const empty = new Option(isWithdrawal && !unique.length
+    ? "No accessible savings" : "Select item", "");
+  addItemSelect.append(empty);
+  for (const name of unique) addItemSelect.append(new Option(name, name));
+  if (!isWithdrawal) addItemSelect.append(new Option("+ Add new item", NEW_ITEM));
+  if (previous && [...addItemSelect.options].some(option => option.value === previous)) {
+    addItemSelect.value = previous;
+  } else if (!isWithdrawal && unique.length === 0) {
+    addItemSelect.value = NEW_ITEM;
+  }
+  syncItemChoice();
+}
+
+function syncItemChoice() {
+  if (editingEntry) {
+    addItemSelectField.hidden = true;
+    addNameField.hidden = false;
+    addName.required = true;
+    return;
+  }
+  addItemSelectField.hidden = false;
+  const newItem = addItemSelect.value === NEW_ITEM;
+  addNameField.hidden = !newItem;
+  addName.required = newItem;
+  addItemSelect.required = true;
+  if (!newItem) addName.value = "";
+}
+
 function updateOptionalFields() {
-  const others = addGroup.value === "Others";
-  const bills = addGroup.value === "Bills";
-  addRecurringField.hidden = !bills;
+  const group = activeAddCategory();
+  const isWithdrawal = group === "Withdraw";
+  const others = group === "Others";
+  const bills = group === "Bills";
+  const service = group !== "IN" && group !== "Saving" && !isWithdrawal;
+  addCategoryField.hidden = addGroup.value !== NEW_CATEGORY;
+  addCategoryName.required = !addCategoryField.hidden;
+  addRecurringField.hidden = !bills || isWithdrawal;
   if (!bills) addRecurring.checked = false;
   addRetailField.hidden = !others;
   addUrlField.hidden = !others;
   addRemarkField.hidden = false;
+  addOptions.hidden = isWithdrawal;
+  document.getElementById("add-service-field").hidden = !service;
+  document.getElementById("add-service-interval-field").hidden = !service;
+  document.getElementById("add-remind-field").hidden = !service;
   if (!others) {
     addRetail.value = "";
     addUrl.value = "";
   }
+  if (isWithdrawal) {
+    addMonth.value = currentMonth.slice(0,4) + "-" + currentMonth.slice(4);
+    addMonth.disabled = true;
+  } else if (!editingEntry) {
+    addMonth.disabled = false;
+  }
+  if (!editingEntry) populateItemChoices();
+}
+
+function enteredItemName() {
+  return editingEntry?.item ||
+    (addItemSelect.value === NEW_ITEM ? addName.value.trim() : addItemSelect.value);
+}
+
+function enteredPrivateMeta(group, item) {
+  if (group === "Withdraw") return null;
+  const input = {
+    note: addHoverNote.value,
+    lastService: addLastService.value.replace("-", ""),
+    interval: Number(addServiceInterval.value),
+    remindBefore: Number(addRemindBefore.value)
+  };
+  const hasDetails = Boolean(input.note.trim() || input.lastService ||
+    input.interval || input.remindBefore);
+  return hasDetails ? buildMeta(group, item, input) : null;
+}
+
+function fillPrivateMeta(meta) {
+  addHoverNote.value = meta?.note || "";
+  addLastService.value = meta?.lastService
+    ? meta.lastService.slice(0, 4) + "-" + meta.lastService.slice(4) : "";
+  addServiceInterval.value = String(meta?.interval || 0);
+  addRemindBefore.value = String(meta?.remindBefore || 0);
+  addOptions.open = Boolean(meta && (meta.note || meta.lastService));
 }
 
 function closeAddPanel() {
