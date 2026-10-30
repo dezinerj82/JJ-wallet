@@ -991,3 +991,66 @@ select:focus-visible {
   font-size: .86rem;
   font-weight: 600;
 }
+
+/* Financial status: no hidden negative balances or altered payment records. */
+.wallet-balance-pill.balance-negative {
+  background: #b4494c;
+  color: #fffaf8;
+  box-shadow: 0 5px 15px rgba(130, 38, 42, .22);
+}
+.wallet-unpaid-pill {
+  background: #a8b1df;
+  color: #253068;
+}
+.hold-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  background: #ffe7e4;
+  border: 1px solid #eebdb9;
+  color: #a2363b;
+  padding: .14rem .46rem;
+  margin-right: .4rem;
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .01em;
+  line-height: 1.25;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.pay-item-button {
+  --btn-bg: #83c5be;
+  --btn-hover: #a7d9d2;
+  --btn-text: #004b51;
+  border-radius: 999px;
+  padding: .36rem .7rem;
+  margin-left: .35rem;
+  min-height: 2rem;
+  font-size: .78rem;
+}
+#pay-item-name { font-weight: 600; }
+#pay-item-cancel {
+  --btn-bg: var(--pearl-aqua);
+  --btn-hover: #a7d9d2;
+  --btn-text: #004b51;
+}
+#pay-item-save {
+  --btn-bg: var(--sunshine-gold);
+  --btn-hover: #ffd782;
+  --btn-text: #493815;
+}
+#pay-item-panel .form-actions-right button {
+  font-size: .9rem;
+  min-height: 2.35rem;
+  padding: .53rem 1.05rem;
+}
+#wallet-download-template {
+  --btn-bg: #d8e9ed;
+  --btn-hover: #c3dfe6;
+  --btn-text: #214b60;
+}
+@media (max-width: 600px) {
+  .wallet-balance-row { flex-wrap: wrap; }
+  .wallet-balance-pill { font-size: 1rem; }
+  .hold-badge { padding: .13rem .4rem; margin-right: .25rem; }
+}
