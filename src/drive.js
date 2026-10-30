@@ -821,8 +821,8 @@ async function writeVerifiedItem(token, file, original, additions) {
 
 export async function saveSavingSettings(token, folderId, previous, input) {
   if (!token || !folderId) throw new Error("Sign in again.");
-  if (previous?.group !== "Saving" ||
-      !previous.item || !Number.isFinite(previous.balance)) {
+  if (previous?.group !== "Saving" || !previous.item ||
+      !(Number.isFinite(previous.balance) || previous.catalogOnly === true)) {
     throw new Error("Select a savings item.");
   }
   const existing = await findOneItemFile(token, folderId, "Saving", previous.item);
@@ -830,7 +830,9 @@ export async function saveSavingSettings(token, folderId, previous, input) {
   const current = String(now.getFullYear()) +
     String(now.getMonth() + 1).padStart(2, "0");
   const latest = latestSavingRow(existing.text, previous.item, current);
-  if (!latest || latest.balance !== previous.balance ||
+  if (previous.catalogOnly === true) {
+    if (latest) throw new Error("Savings changed. Press Refresh.");
+  } else if (!latest || latest.balance !== previous.balance ||
       latest.month !== previous.month) {
     throw new Error("Savings changed. Press Refresh.");
   }
