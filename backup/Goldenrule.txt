@@ -78,7 +78,7 @@ ADD / EDIT / REMOVE FORM
 - Date: select the current or a future payment month; allow typed dates converted to YYYYMM.
 - Amount: numeric MYR, without a currency prefix in the entry field.
 - Retail: shown only for Others.
-- Remark: optional text.
+- Remark: optional text on every group. The monthly Details column shows only the latest user-entered remark for each item, without payment calculations or technical status text.
 - Others may also store a URL to the shop or item.
 - Submit and Cancel must both be available even when fields are empty.
 - Cancel returns to the prior screen, with no save.
@@ -93,7 +93,9 @@ ADD / EDIT / REMOVE FORM
 - Readable amount displays omit trailing zero decimals while preserving nonzero cents and exact values in the TXT logs.
 - New Bills and Others obligations start unpaid; actual payment updates are handled separately.
 - Saving entry creation is deferred until the payment flow can safely commit allocations and balances.
-- Optional retail, URL and remark for Others are appended as trailing tab-delimited fields after the core payment fields.
+- For Others, optional retail, URL and remark follow the core payment fields as trailing tab-delimited fields.
+- For IN and Bills, an optional remark follows the core fields, leaving the original format unchanged if the remark is empty.
+- Existing Saving records may also carry an optional remark after their balance.
 - Incomplete submissions must not corrupt calculations; the precise safe representation is pending.
 - Amendments append revised log entries; historical lines remain preserved.
 - Do not edit completed previous months.
@@ -134,7 +136,7 @@ RECORDS / STORAGE
 - IN fields: MainCategory, Item, Month, Amount.
 - Saving fields: MainCategory, Item, Month, Added, Withdrawn, Balance.
 - Bills/Other fields: MainCategory, Item, Month, BillAmount, Paid, Unpaid.
-- Additional fields for retail, URL and remark must remain compatible with the final agreed schema.
+- Optional remark fields and Others retail/URL fields are compatible with legacy entries that lack these extras.
 - Append all changes instead of erasing past records.
 - The LAST valid row for a specific item/month is the effective state for that month.
 - A later version of an existing record is not a second charge.
@@ -153,7 +155,6 @@ SHAREABLE OUTSTANDING SUMMARY
 PROCESS RULES PENDING DESIGN
 - The detailed Start Payment review and human-error checks.
 - Safe blank/incomplete record handling and deletion marker semantics.
-- Final optional retail/URL/remark field encoding.
 - Export format.
 - File segmentation and partial-write recovery behavior.
 
