@@ -30,6 +30,16 @@ SAVING
 - Savings balances remain separate from ordinary spendable income.
 
 BILLS
+- Only Bills supports an opt-in Recurring monthly control in Add and Update.
+- A Bills recurrence rule is stored in the same private per-item TXT file as an append-only metadata directive; non-Bills groups are never generated automatically.
+- Initially fill selected current or future months through December 2027, without editing locked earlier months.
+- From June 2027, on the next authenticated wallet open or refresh, generate missing months for 2028 and 2029. From June 2029 generate 2030 and 2031, continuing every two years.
+- A renewal is performed only while the authenticated wallet is open, not by a background server.
+- Generate one unpaid monthly snapshot per missing month using the saved recurring template; never overwrite an existing month, edited record or DELETE marker.
+- Preserve manual changes, historical lines and already-recorded payments. A deleted month must not return automatically.
+- Updating one occurrence changes only that month, unless the Recurring toggle is explicitly switched.
+- Switching recurrence off stops later automatic generation; months already saved remain until individually changed.
+- Re-read and verify private TXT contents after each recurrence write. A failed generation can be retried after Refresh without duplicating successfully written months.
 - Recurring charges may be fixed, calendar-calculated, variable or contract-dependent.
 - Periodic charges appear only in configured due months, with reminders.
 - Others accepts new individual items, optional shop information, URL and remarks.
@@ -159,6 +169,7 @@ RECORDS / STORAGE
 - Saving fields: MainCategory, Item, Month, Added, Withdrawn, Balance.
 - Bills/Other fields: MainCategory, Item, Month, BillAmount, Paid, Unpaid.
 - Optional remark fields and Others retail/URL fields are compatible with legacy entries that lack these extras.
+- Recurring Bills metadata directives begin with @RECUR and are not financial rows; only valid Bills rules affect automatic month creation.
 - Append all changes instead of erasing past records.
 - The LAST valid row, including a valid DELETE marker, for a specific item/month is the effective state for that month.
 - A later version of an existing record is not a second charge.
