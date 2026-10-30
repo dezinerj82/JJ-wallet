@@ -163,7 +163,7 @@ select:focus-visible {
 #refresh-wallet-button {
   --btn-bg: var(--pearl-aqua);
   --btn-hover: #a7d9d2;
-  --btn-text: #005960;
+  --btn-text: #004b51;
 }
 #add-item-button,
 #submit-item-button {
@@ -263,7 +263,7 @@ select:focus-visible {
   letter-spacing: .005em;
   --btn-bg: var(--pearl-aqua);
   --btn-hover: #a5d8d1;
-  --btn-text: #005960;
+  --btn-text: #004b51;
   box-shadow: 0 3px 8px rgba(0, 71, 78, .08);
 }
 .group-toggle::after {
@@ -281,7 +281,7 @@ select:focus-visible {
 .group-in {
   --btn-bg: var(--pearl-aqua);
   --btn-hover: #a7d9d2;
-  --btn-text: #005960;
+  --btn-text: #004b51;
 }
 .group-saving {
   --btn-bg: var(--sunshine-gold);
