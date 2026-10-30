@@ -253,7 +253,8 @@ export function calculateMonthlyPlan(allEntries, month, asOf = new Date()) {
   // A current-month savings snapshot already exists in the private ledger.
   // Treat it as committed and never overwrite or plan a second allocation.
   const targets = groups.Saving
-    .filter(e => e.month !== month && (e.meta?.monthlySaving || 0) > 0)
+    .filter(e => e.month !== month && (e.meta?.monthlySaving || 0) > 0 &&
+      (e.meta?.savingFromMonth || "202611") <= month)
     .map(e => ({
       item: e.item,
       targetCents: cents(e.meta.monthlySaving),
