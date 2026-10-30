@@ -1,3 +1,124 @@
-// Record and cash-flow rules — to be implemented.
-// Month identifiers use YYYYMM; last valid record for an item/month wins.
-// Historical log entries remain intact; no financial data lives in GitHub.
+// Pure read-only wallet record parsing. No financial records are stored in GitHub.
+// Item TXT lines are tab-separated. Last valid entry for an item/month wins.
+// Forecast/carry-forward logic is intentionally NOT applied in this first read-only view.
+
+export const WALLET_GROUPS = Object.freeze(["IN", "Saving", "Bills", "Others"]);
+const MONTH_RE = /^(?:19|20|21)\d{2}(?:0[1-9]|1[0-2])$/;
+const AMOUNT_RE = /^(?:0|[1-9]\d{0,11})(?:\.\d{1,2})?$/;
+
+function safeAmount(value) {
+  if (typeof value !== "string" || !AMOUNT_RE.test(value)) return null;
+  const n = Number(value);
+  return Number.isSafeInteger(Math.round(n * 100)) ? n : null;
+}
+
+function parseLine(line) {
+  const fields = line.replace(/\r$/, "").split("\t");
+  if (fields.length < 4) return null;
+
+  const group = fields[0] === "Other" ? "Others" : fields[0];
+  const item = fields[1]?.trim();
+  const month = fields[2];
+  if (!WALLET_GROUPS.includes(group) || !item || item.length > 180 ||
+      !MONTH_RE.test(month) || /[\u0000-\u001f]/.test(item)) {
+    return null;
+  }
+
+  if (group === "IN" && fields.length === 4) {
+    const amount = safeAmount(fields[3]);
+    return amount === null ? null : { group, item, month, amount };
+  }
+
+  if (group === "Saving" && fields.length >= 6) {
+    const added = safeAmount(fields[3]);
+    const withdrawn = safeAmount(fields[4]);
+    const balance = safeAmount(fields[5]);
+    return [added, withdrawn, balance].some(v => v === null)
+      ? null : { group, item, month, added, withdrawn, balance };
+  }
+
+  if ((group === "Bills" || group === "Others") && fields.length >= 6) {
+    const amount = safeAmount(fields[3]);
+    const paid = safeAmount(fields[4]);
+    const unpaid = safeAmount(fields[5]);
+    return [amount, paid, unpaid].some(v => v === null)
+      ? null : { group, item, month, amount, paid, unpaid };
+  }
+
+  return null;
+}
+
+export function parseWalletFiles(files) {
+  if (!Array.isArray(files)) throw new TypeError("Expected wallet TXT files.");
+  const byMonth = new Map();
+  let validLines = 0;
+  let invalidLines = 0;
+
+  // TXT files are sorted by file name. Each later valid row updates the item/month.
+  for (const file of files) {
+    if (!file || typeof file.content !== "string" ||
+        !file.name?.toLowerCase().endsWith(".txt") ||
+        file.name.toLowerCase() === "storage-check.txt") continue;
+
+    for (const line of file.content.split("\n")) {
+      if (!line.trim()) continue;
+      const entry = parseLine(line);
+      if (!entry) {
+        invalidLines++;
+        continue;
+      }
+      validLines++;
+      const key = JSON.stringify([entry.group, entry.item, entry.month]);
+      byMonth.set(key, entry);
+    }
+  }
+
+  return { entries: Array.from(byMonth.values()), validLines, invalidLines };
+}
+
+export function entriesForMonth(allEntries, month) {
+  if (!MONTH_RE.test(month)) throw new Error("Invalid month.");
+  const groups = Object.fromEntries(WALLET_GROUPS.map(group => [group, []]));
+  const latestSavings = new Map();
+
+  for (const entry of allEntries) {
+    if (entry.group === "Saving" && entry.month <= month) {
+      const key = entry.item;
+      if (!latestSavings.has(key) || latestSavings.get(key).month < entry.month) {
+        latestSavings.set(key, entry);
+      }
+    } else if (entry.month === month && entry.group !== "Saving" && groups[entry.group]) {
+      groups[entry.group].push(entry);
+    }
+  }
+
+  groups.Saving = [...latestSavings.values()];
+  for (const group of WALLET_GROUPS) {
+    groups[group].sort((a, b) => a.item.localeCompare(b.item));
+  }
+  return groups;
+}
+
+export function monthKey(date) {
+  return String(date.getFullYear()) + String(date.getMonth() + 1).padStart(2, "0");
+}
+
+export function shiftedMonthKey(month, offset) {
+  if (!MONTH_RE.test(month) || !Number.isInteger(offset)) throw new Error("Invalid month.");
+  const year = Number(month.slice(0, 4));
+  const monthIndex = Number(month.slice(4, 6)) - 1;
+  return monthKey(new Date(year, monthIndex + offset, 1));
+}
+
+export function formatMonth(month) {
+  if (!MONTH_RE.test(month)) throw new Error("Invalid month.");
+  return new Intl.DateTimeFormat("en-MY", { month: "long", year: "numeric" })
+    .format(new Date(Number(month.slice(0, 4)), Number(month.slice(4, 6)) - 1, 1));
+}
+
+export function formatAmount(value) {
+  if (!Number.isFinite(value)) return "—";
+  return new Intl.NumberFormat("en-MY", {
+    minimumFractionDigits: 2, maximumFractionDigits: 2
+  }).format(value);
+}
