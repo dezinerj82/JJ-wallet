@@ -1,5 +1,5 @@
 import { initialiseGoogleLogin, restoreLoginSession, signIn, signOut, getDriveToken } from "./auth.js";
-import { findBillsFolder, readWalletTextFiles, addWalletItem, updateWalletItem, deleteWalletItem } from "./drive.js";
+import { findBillsFolder, readWalletTextFiles, addWalletItem, updateWalletItem, deleteWalletItem, renewRecurringBills } from "./drive.js";
 import { getMyrKrwRate, formatWalletCurrency, rateDateLabel } from "./currency.js";
 import {
   WALLET_GROUPS, parseWalletFiles, entriesForMonth, calculateMonthlyBalance,
@@ -84,6 +84,8 @@ const addGroup = document.getElementById("add-item-group");
 const addName = document.getElementById("add-item-name");
 const addMonth = document.getElementById("add-item-month");
 const addAmount = document.getElementById("add-item-amount");
+const addRecurringField = document.getElementById("add-recurring-field");
+const addRecurring = document.getElementById("add-item-recurring");
 const addRetailField = document.getElementById("add-retail-field");
 const addUrlField = document.getElementById("add-url-field");
 const addRemarkField = document.getElementById("add-remark-field");
@@ -259,6 +261,7 @@ function resetWallet() {
   addName.readOnly = false;
   addMonth.disabled = false;
   addForm.reset();
+  addRecurring.checked = false;
   addButton.disabled = true;
   submitItemButton.disabled = false;
   cancelItemButton.disabled = false;
@@ -485,20 +488,30 @@ async function loadWalletRecords(message = "Refreshing your items...") {
   setWalletMessage("Loading items...");
 
   try {
-    const files = await readWalletTextFiles(getDriveToken(), folderId);
+    let files = await readWalletTextFiles(getDriveToken(), folderId);
+    if (version !== connectionVersion || !getDriveToken()) return;
+    let recurringError = "";
+    try {
+      const changed = await renewRecurringBills(getDriveToken(), folderId, files);
+      if (version !== connectionVersion || !getDriveToken()) return;
+      if (changed) files = await readWalletTextFiles(getDriveToken(), folderId);
+    } catch {
+      recurringError = "Couldn't add recurring bills. Press Refresh.";
+      // Earlier files may have been saved before another one failed.
+      files = await readWalletTextFiles(getDriveToken(), folderId);
+    }
     if (version !== connectionVersion || !getDriveToken()) return;
     const parsed = parseWalletFiles(files);
     walletEntries = parsed.entries;
     walletBalanceReady = true;
-    walletBalanceComplete = parsed.invalidLines === 0;
+    walletBalanceComplete = parsed.invalidLines === 0 && !recurringError;
     renderMonth();
     renderComparisonMonth();
     walletTableWrap.hidden = false;
-    if (parsed.invalidLines) {
-      setWalletMessage(
-        "Some saved items couldn't be displayed (" + parsed.invalidLines +
-        "). Please check your records.", true
-      );
+    if (recurringError) {
+      setWalletMessage(recurringError, true);
+    } else if (parsed.invalidLines) {
+      setWalletMessage("Some records couldn't be loaded. Press Refresh.", true);
     } else {
       setWalletMessage("");
     }
@@ -554,6 +567,9 @@ async function onDriveReady() {
 
 function updateOptionalFields() {
   const others = addGroup.value === "Others";
+  const bills = addGroup.value === "Bills";
+  addRecurringField.hidden = !bills;
+  if (!bills) addRecurring.checked = false;
   addRetailField.hidden = !others;
   addUrlField.hidden = !others;
   addRemarkField.hidden = false;
@@ -577,6 +593,7 @@ function closeAddPanel() {
   addMonth.disabled = false;
   addStatus.textContent = "";
   addForm.reset();
+  addRecurring.checked = false;
   submitItemButton.disabled = false;
 }
 
@@ -603,6 +620,7 @@ function openUpdateForm(entry) {
   addUrl.value = entry.url || "";
   addRemark.value = entry.remark || "";
   updateOptionalFields();
+  addRecurring.checked = entry.group === "Bills" && entry.recurring === true;
   deleteItemButton.hidden = false;
   const paid = entry.group !== "IN" && entry.paid > 0;
   deleteItemButton.disabled = paid;
@@ -704,7 +722,8 @@ addForm.addEventListener("submit", async event => {
       amount: addAmount.value,
       retail: addRetail.value,
       url: addUrl.value,
-      remark: addRemark.value
+      remark: addRemark.value,
+      recurring: addGroup.value === "Bills" && addRecurring.checked
     };
     const result = previous
       ? await updateWalletItem(getDriveToken(), activeFolderId, { ...payload, previous })
