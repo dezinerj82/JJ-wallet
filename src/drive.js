@@ -1,3 +1,8 @@
+import {
+  latestRecurringRule, recurringDirectiveLine,
+  recurringMonthsDue, recurringBillLine
+} from "./recurring.js";
+
 // Private Drive storage. Uses only the user's temporary drive.file OAuth token.
 // Recognize the original app-created Wallet bills folder by its marker after moves within Drive.
 // Do not create another folder if it is temporarily invisible after a move.
@@ -372,6 +377,10 @@ export async function addWalletItem(token, folderId, entry) {
     throw new Error("Google Drive is not connected. Sign in again.");
   }
   const item = validateEntry(entry);
+  const recurring = entry?.recurring === true;
+  if (recurring && item.group !== "Bills") {
+    throw new Error("Only Bills can repeat.");
+  }
   const filename = await itemFileName(item.group, item.item);
   const files = await listWalletFileMetadata(token, folderId);
 
@@ -392,6 +401,23 @@ export async function addWalletItem(token, folderId, entry) {
     throw new Error("Duplicate item files were found. Review them before saving.");
   }
 
+  function addedLines(base) {
+    let newLines = item.line;
+    if (recurring) {
+      const rule = {
+        item: item.item, month: item.month, amount: Number(entry.amount),
+        remark: String(entry.remark || "").trim(), active: true
+      };
+      newLines += recurringDirectiveLine(rule, true);
+      const combined = base +
+        (base && !base.endsWith("\n") ? "\n" : "") + newLines;
+      for (const month of recurringMonthsDue(combined, rule, new Date())) {
+        newLines += recurringBillLine(rule, month);
+      }
+    }
+    return newLines;
+  }
+
   let fileId;
   let expected;
   if (matching.length) {
@@ -405,16 +431,19 @@ export async function addWalletItem(token, folderId, entry) {
     }
     expected = existing.content +
       (existing.content && !existing.content.endsWith("\n") ? "\n" : "") +
-      item.line;
+      addedLines(existing.content);
     if (new Blob([expected]).size > WRITE_LIMIT) {
       throw new Error("This item’s saved history is full. No changes were made.");
     }
     await replaceWalletText(token, existing.file.id, expected);
     fileId = existing.file.id;
   } else {
-    const created = await createWalletTextFile(token, folderId, filename, item.line);
+    expected = addedLines("");
+    if (new Blob([expected]).size > WRITE_LIMIT) {
+      throw new Error("This bill is too large to save.");
+    }
+    const created = await createWalletTextFile(token, folderId, filename, expected);
     fileId = created.id;
-    expected = item.line;
   }
 
   // Verify full file text before reporting success. Never write any financial data to GitHub.
@@ -519,12 +548,42 @@ export async function updateWalletItem(token, folderId, changes) {
     revised[5] = (Math.round((newAmount - previouslyPaid) * 100) / 100).toFixed(2);
   }
 
-  if (last.join("\t") === revised.join("\t")) {
+  const savedRule = item.group === "Bills"
+    ? latestRecurringRule(existing.content, item.item) : null;
+  const currentlyRecurring = savedRule?.active === true;
+  if (item.group === "Bills" &&
+      Boolean(prior.recurring) !== currentlyRecurring) {
+    throw new Error("Recurring setting changed. Refresh and try again.");
+  }
+  const wantsRecurring = item.group === "Bills" && changes.recurring === true;
+  if (changes.recurring === true && item.group !== "Bills") {
+    throw new Error("Only Bills can repeat.");
+  }
+  const switchRule = item.group === "Bills" && wantsRecurring !== currentlyRecurring;
+  const itemChanged = last.join("\t") !== revised.join("\t");
+  if (!itemChanged && !switchRule) {
     throw new Error("No changes to save.");
+  }
+  let appended = itemChanged ? revised.join("\t") + "\n" : "";
+  if (switchRule) {
+    const rule = {
+      item: item.item, month: item.month,
+      amount: Number(revised[3]), remark: String(changes.remark || "").trim(),
+      active: wantsRecurring
+    };
+    appended += recurringDirectiveLine(rule, wantsRecurring);
+    if (wantsRecurring) {
+      const seenContent = existing.content +
+        (existing.content && !existing.content.endsWith("\n") ? "\n" : "") +
+        appended;
+      for (const month of recurringMonthsDue(seenContent, rule, new Date())) {
+        appended += recurringBillLine(rule, month);
+      }
+    }
   }
   const log = existing.content +
     (existing.content && !existing.content.endsWith("\n") ? "\n" : "") +
-    revised.join("\t") + "\n";
+    appended;
   if (new Blob([log]).size > WRITE_LIMIT) {
     throw new Error("This item’s saved history is full. No changes were made.");
   }
@@ -615,4 +674,67 @@ export async function deleteWalletItem(token, folderId, previous) {
     throw new Error("Couldn't verify this deletion. Check Drive before retrying.");
   }
   return { group, item, month };
+}
+
+
+// Catch up due recurring Bills on wallet load or Refresh.
+// Each TXT file is re-read and fully verified. Existing snapshots and DELETE
+// tombstones always win; no user-edited month is automatically overwritten.
+export async function renewRecurringBills(token, folderId, files) {
+  if (!token || !folderId) throw new Error("Wallet session expired.");
+  const now = new Date();
+  const dueFiles = [];
+  for (const file of files) {
+    if (!file || !file.name?.toLowerCase().endsWith(".txt") ||
+        typeof file.content !== "string") continue;
+    // A single TXT belongs to one item. Only recognised active rules qualify.
+    const directives = file.content.split("\n")
+      .filter(line => line.startsWith("@RECUR\t"))
+      .map(line => line.replace(/\r$/, "").split("\t")[2])
+      .filter(Boolean);
+    const uniqueItems = [...new Set(directives.map(v => v.toLocaleLowerCase("en")))];
+    if (uniqueItems.length > 1) {
+      throw new Error("Recurring bill file needs review.");
+    }
+    for (const itemName of uniqueItems) {
+      const rule = latestRecurringRule(file.content, itemName);
+      if (rule?.active && recurringMonthsDue(file.content, rule, now).length) {
+        dueFiles.push({ name: file.name, item: rule.item });
+      }
+    }
+  }
+  if (!dueFiles.length) return false;
+  const metadata = await listWalletFileMetadata(token, folderId);
+  let changed = false;
+  for (const target of dueFiles) {
+    const matches = metadata.filter(file => file.name === target.name);
+    if (matches.length !== 1 || matches[0].appProperties?.purpose !== ITEM_MARKER) {
+      throw new Error("Recurring bill needs review.");
+    }
+    const file = matches[0];
+    if (Number(file.size || 0) > WRITE_LIMIT) {
+      throw new Error("Recurring bill history is full.");
+    }
+    const content = await getFileText(token, file.id);
+    if (new Blob([content]).size > WRITE_LIMIT) {
+      throw new Error("Recurring bill history is full.");
+    }
+    // Re-check after the current read: a repeat may already be disabled.
+    const rule = latestRecurringRule(content, target.item);
+    const due = recurringMonthsDue(content, rule, now);
+    if (!due.length) continue;
+    const additions = due.map(month => recurringBillLine(rule, month)).join("");
+    const expected = content +
+      (content && !content.endsWith("\n") ? "\n" : "") + additions;
+    if (new Blob([expected]).size > WRITE_LIMIT) {
+      throw new Error("Recurring bill history is full.");
+    }
+    await replaceWalletText(token, file.id, expected);
+    const confirmed = await getFileText(token, file.id);
+    if (confirmed !== expected) {
+      throw new Error("Couldn't verify recurring bills. Refresh to check.");
+    }
+    changed = true;
+  }
+  return changed;
 }
