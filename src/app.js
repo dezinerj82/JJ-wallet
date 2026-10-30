@@ -1,5 +1,5 @@
 import { initialiseGoogleLogin, restoreLoginSession, signIn, signOut, getDriveToken } from "./auth.js";
-import { findBillsFolder, readWalletTextFiles, addWalletItem, updateWalletItem } from "./drive.js";
+import { findBillsFolder, readWalletTextFiles, addWalletItem, updateWalletItem, deleteWalletItem } from "./drive.js";
 import { getMyrKrwRate, formatWalletCurrency, rateDateLabel } from "./currency.js";
 import {
   WALLET_GROUPS, parseWalletFiles, entriesForMonth,
@@ -88,6 +88,7 @@ const addRemark = document.getElementById("add-item-remark");
 const addStatus = document.getElementById("add-item-status");
 const submitItemButton = document.getElementById("submit-item-button");
 const cancelItemButton = document.getElementById("cancel-item-button");
+const deleteItemButton = document.getElementById("delete-item-button");
 
 function readRememberedBrowser() {
   try { return localStorage.getItem(TRUST_KEY) === "yes"; }
@@ -242,6 +243,8 @@ function resetWallet() {
   otherMonthsButton.disabled = true;
   addPanel.hidden = true;
   editingEntry = null;
+  deleteItemButton.hidden = true;
+  deleteItemButton.disabled = false;
   addGroup.disabled = false;
   addName.readOnly = false;
   addMonth.disabled = false;
@@ -522,6 +525,8 @@ function closeAddPanel() {
   addPanel.hidden = true;
   setItemProgress();
   cancelItemButton.disabled = false;
+  deleteItemButton.hidden = true;
+  deleteItemButton.disabled = false;
   editingEntry = null;
   addHeading.textContent = "Add item";
   submitItemButton.textContent = "Submit";
@@ -556,7 +561,14 @@ function openUpdateForm(entry) {
   addUrl.value = entry.url || "";
   addRemark.value = entry.remark || "";
   updateOptionalFields();
-  addStatus.textContent = "";
+  deleteItemButton.hidden = false;
+  const paid = entry.group !== "IN" && entry.paid > 0;
+  deleteItemButton.disabled = paid;
+  deleteItemButton.title = paid ? "Items with recorded payments cannot be deleted" :
+    "Delete this item from " + formatMonth(entry.month);
+  addStatus.textContent = paid
+    ? "This item has a recorded payment, so it can't be deleted."
+    : "";
   addPanel.hidden = false;
   addAmount.focus();
 }
@@ -579,6 +591,59 @@ addButton.addEventListener("click", () => {
 addGroup.addEventListener("change", updateOptionalFields);
 cancelItemButton.addEventListener("click", closeAddPanel);
 
+deleteItemButton.addEventListener("click", async () => {
+  const previous = editingEntry;
+  if (!previous || deleteItemButton.disabled) return;
+  if (!activeFolderId || !getDriveToken()) {
+    addStatus.textContent = "Your session has expired. Please sign in again.";
+    return;
+  }
+  if (previous.group === "Saving" || previous.month < currentMonth) return;
+
+  const confirmed = window.confirm(
+    "Delete " + previous.item + " from " + formatMonth(previous.month) + "?\n\n" +
+    "It will disappear from this month's wallet and totals. " +
+    "Other months and the saved history will stay unchanged."
+  );
+  if (!confirmed) return;
+
+  const version = connectionVersion;
+  const folderId = activeFolderId;
+  const token = getDriveToken();
+  deleteItemButton.disabled = true;
+  submitItemButton.disabled = true;
+  cancelItemButton.disabled = true;
+  addButton.disabled = true;
+  otherMonthsButton.disabled = true;
+  refreshButton.disabled = true;
+  addStatus.textContent = "";
+  setItemProgress("Deleting your item...");
+
+  try {
+    const result = await deleteWalletItem(token, folderId, previous);
+    if (version !== connectionVersion) return;
+    expandedGroups.set(result.group, true);
+    comparisonGroups.set(result.group, true);
+    closeAddPanel();
+    await loadWalletRecords("Refreshing your list...");
+  } catch (error) {
+    if (version === connectionVersion) {
+      addStatus.textContent = error.message || "Couldn't delete this item. Please try again.";
+    }
+  } finally {
+    if (version === connectionVersion) {
+      setItemProgress();
+      deleteItemButton.disabled = Boolean(editingEntry && editingEntry.group !== "IN" &&
+        editingEntry.paid > 0);
+      submitItemButton.disabled = false;
+      cancelItemButton.disabled = false;
+      addButton.disabled = !activeFolderId;
+      otherMonthsButton.disabled = !activeFolderId;
+      refreshButton.disabled = false;
+    }
+  }
+});
+
 addForm.addEventListener("submit", async event => {
   event.preventDefault();
   if (!activeFolderId || !getDriveToken()) {
@@ -590,6 +655,7 @@ addForm.addEventListener("submit", async event => {
   const previous = editingEntry;
   submitItemButton.disabled = true;
   cancelItemButton.disabled = true;
+  deleteItemButton.disabled = true;
   addButton.disabled = true;
   refreshButton.disabled = true;
   addStatus.textContent = "";
@@ -622,6 +688,8 @@ addForm.addEventListener("submit", async event => {
       setItemProgress();
       submitItemButton.disabled = false;
       cancelItemButton.disabled = false;
+      deleteItemButton.disabled = Boolean(editingEntry && editingEntry.group !== "IN" &&
+        editingEntry.paid > 0);
       addButton.disabled = !activeFolderId;
       otherMonthsButton.disabled = !activeFolderId;
       refreshButton.disabled = false;
