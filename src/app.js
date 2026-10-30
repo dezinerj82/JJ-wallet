@@ -1,8 +1,9 @@
 import { initialiseGoogleLogin, restoreLoginSession, signIn, signOut, getDriveToken } from "./auth.js";
-import { findBillsFolder, readWalletTextFiles, addWalletItem, updateWalletItem, deleteWalletItem, renewRecurringBills, saveSavingSettings, withdrawSavingItem } from "./drive.js";
+import { findBillsFolder, readWalletTextFiles, addWalletItem, updateWalletItem, deleteWalletItem, renewRecurringBills, renewScheduledItems, importWalletSetup, saveSavingSettings, withdrawSavingItem } from "./drive.js";
 import { getMyrKrwRate, formatWalletCurrency, rateDateLabel } from "./currency.js";
 import { displayGroup, availableGroups, isCustomGroup, NEW_CATEGORY, NEW_ITEM } from "./groups.js";
 import { buildMeta, parseAllMetadata, serviceReminders, effectiveServiceMonth, metaKey } from "./private-meta.js";
+import { plannedAlerts, validateSetupPayload } from "./setup.js";
 import {
   WALLET_GROUPS, parseWalletFiles, entriesForMonth, calculateMonthlyPlan,
   monthKey, shiftedMonthKey, formatMonth
@@ -25,6 +26,8 @@ let editingSavings = null;
 let withdrawApproved = false;
 let lastAddGroup = "IN";
 let walletMetadata = new Map();
+let walletCatalog = [];
+let walletSchedules = [];
 const reminderSeen = new Set();
 let walletProgressTicket = 0;
 const displayCurrencies = { main: "MYR", other: "MYR" };
@@ -278,6 +281,8 @@ function resetWallet() {
   activeFolderId = null;
   walletEntries = [];
   walletMetadata = new Map();
+  walletCatalog = [];
+  walletSchedules = [];
   reminderSeen.clear();
   withdrawApproved = false;
   savingsPanel.hidden = true;
@@ -404,6 +409,9 @@ function tooltipText(entry) {
   if (!meta) return "";
   const lines = [];
   if (meta.note.trim()) lines.push(meta.note.trim());
+  if (meta.hoverUnpaid && Number.isFinite(entry.unpaid)) {
+    lines.push("Remaining balance : RM" + formatAmount(entry.unpaid));
+  }
   if (meta.lastService) {
     const effective = effectiveServiceMonth(meta, walletEntries);
     lines.push("Last service : " + formatMonth(effective));
@@ -432,13 +440,17 @@ function addItemNameCell(row, entry) {
 
 async function showDueServiceReminders() {
   if (!activeFolderId || !getDriveToken() || walletDialog.open) return;
-  const upcoming = serviceReminders(walletMetadata, walletEntries);
+  const upcoming = serviceReminders(walletMetadata, walletEntries)
+    .map(reminder => ({
+      id: metaKey(reminder.group, reminder.item) + ":" + reminder.dueMonth,
+      text: reminder.item + " · Service due " + formatMonth(reminder.dueMonth)
+    }));
+  upcoming.push(...plannedAlerts(walletSchedules));
   for (const reminder of upcoming) {
     if (!activeFolderId || !getDriveToken()) return;
-    const key = metaKey(reminder.group, reminder.item) + ":" + reminder.dueMonth;
-    if (reminderSeen.has(key)) continue;
-    reminderSeen.add(key);
-    await confirmWallet(reminder.item + " · Service due " + formatMonth(reminder.dueMonth));
+    if (reminderSeen.has(reminder.id)) continue;
+    reminderSeen.add(reminder.id);
+    await confirmWallet(reminder.text);
   }
 }
 
@@ -657,6 +669,8 @@ async function loadWalletRecords(message = "Refreshing your items...") {
     if (version !== connectionVersion || !getDriveToken()) return;
     const parsed = parseWalletFiles(files);
     walletEntries = parsed.entries;
+    walletCatalog = parsed.catalog;
+    walletSchedules = parsed.schedules;
     walletMetadata = parseAllMetadata(files);
     walletBalanceReady = true;
     walletBalanceComplete = parsed.invalidLines === 0 && !recurringError;
@@ -675,6 +689,8 @@ async function loadWalletRecords(message = "Refreshing your items...") {
     if (version !== connectionVersion) return;
     walletEntries = [];
     walletMetadata = new Map();
+    walletCatalog = [];
+    walletSchedules = [];
     walletBalanceReady = false;
     walletBalanceComplete = false;
     walletBalanceRow.hidden = true;
@@ -728,7 +744,7 @@ function populateCategoryChoices() {
     if (option.dataset.extra === "true") option.remove();
   }
   const anchor = addGroup.querySelector('option[value="Withdraw"]');
-  for (const category of availableGroups(walletEntries)) {
+  for (const category of availableGroups([...walletEntries, ...walletCatalog])) {
     if (!isCustomGroup(category)) continue;
     const option = new Option(category, category);
     option.dataset.extra = "true";
@@ -751,7 +767,8 @@ function populateItemChoices(previous = "") {
     ? entriesForMonth(walletEntries, currentMonth).Saving
       .filter(entry => entry.meta?.access === "accessible")
       .map(entry => entry.item)
-    : walletEntries.filter(entry => entry.group === group).map(entry => entry.item);
+    : [...walletEntries, ...walletCatalog]
+      .filter(entry => entry.group === group).map(entry => entry.item);
   const unique = [...new Set(names)].sort((a, b) => a.localeCompare(b));
   addItemSelect.replaceChildren();
   const empty = new Option(isWithdrawal && !unique.length
