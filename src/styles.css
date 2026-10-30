@@ -953,3 +953,33 @@ select:focus-visible {
 .wallet-dialog-actions button { min-height: 2.35rem; padding: .53rem 1.25rem; font-size: .9rem; }
 #wallet-dialog-cancel { --btn-bg: var(--pearl-aqua); --btn-hover: #a7d9d2; --btn-text: #004b51; }
 #wallet-dialog-ok { --btn-bg: var(--sunshine-gold); --btn-hover: #ffd782; --btn-text: #493815; }
+
+/* A savings target is a plan, not money added to the saved balance. */
+.setting-note input[type="number"] {
+  width: 100%;
+  min-height: 2.9rem;
+  padding: .65rem .75rem;
+  border: 1px solid var(--pearl-aqua);
+  border-radius: 11px;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-size: .96rem;
+}
+.saving-plan-detail {
+  display: block;
+  margin-top: .18rem;
+  color: #404a82;
+  font-size: .81rem;
+  font-weight: 500;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+.saving-plan-adjusted {
+  color: #87422e;
+  font-weight: 600;
+}
+.other-months-table .saving-plan-detail {
+  font-size: clamp(.7rem, 1.8cqi, .81rem);
+  white-space: normal;
+}
