@@ -125,6 +125,13 @@ select:focus-visible {
   --btn-hover: #ffd0c0;
   --btn-text: #763c2c;
 }
+/* Richer peach brings Sign out to the same visual strength as Refresh and Add. */
+#logout-button,
+#unauthorized-logout-button {
+  --btn-bg: #f3a998;
+  --btn-hover: #eda28f;
+  --btn-text: #5e2b25;
+}
 
 /* Wallet heading: prominent bubble, then narrow small actions. */
 #wallet-view { margin-top: .95rem; }
@@ -643,4 +650,76 @@ select:focus-visible {
   body.other-months-open main .wallet-table {
     min-width: 33.5rem;
   }
+}
+
+
+/* Currency switchers use the same gentle colour scheme as the other controls. */
+.wallet-table .amount-column {
+  white-space: nowrap;
+}
+.amount-heading {
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+}
+.currency-select {
+  width: auto;
+  min-width: 3.5rem;
+  min-height: 2rem;
+  padding: .3rem .45rem;
+  border: 1px solid var(--pearl-aqua);
+  border-radius: .75rem;
+  background: var(--alice-blue);
+  color: var(--stormy-teal);
+  font: inherit;
+  font-size: .91rem;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: background-color 190ms ease, border-color 190ms ease;
+}
+.currency-select:hover { background: #dceff2; }
+.currency-select:focus-visible {
+  outline: 3px solid var(--tangerine-dream);
+  outline-offset: 2px;
+}
+.exchange-info {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: .25rem .65rem;
+  margin: .75rem .2rem 0;
+  color: #4f7178;
+  font-size: .83rem;
+  line-height: 1.45;
+}
+.exchange-info a {
+  color: var(--soft-indigo);
+  font-size: inherit;
+  text-decoration: underline;
+  text-underline-offset: .15em;
+}
+.exchange-progress-track {
+  flex: 0 0 100%;
+  max-width: 15rem;
+  height: .27rem;
+  margin-top: .4rem;
+}
+.other-months-table .amount-heading { gap: .25rem; }
+.other-months-table .currency-select {
+  min-width: 2.9rem;
+  min-height: 1.65rem;
+  padding: .2rem .27rem;
+  font-size: .78rem;
+}
+.other-months-window .exchange-info {
+  font-size: .77rem;
+  margin: .55rem .1rem 0;
+}
+@media (max-width: 600px) {
+  .amount-heading { gap: .3rem; }
+  .currency-select { min-width: 3.1rem; padding: .27rem .3rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .currency-select { transition: none; }
 }
