@@ -34,6 +34,15 @@ SAVING
 - Future or uncommitted allocations must not be made available for withdrawals.
 - Carry the last confirmed savings balance into the next month.
 - Balance = last confirmed balance + committed savings additions - confirmed withdrawals.
+- Savings settings allow a private monthly target amount per existing savings item. Default target is zero until chosen.
+- On each month view, calculate IN minus all Bills, Others and custom expense groups, and minus existing current-month recorded savings additions.
+- Automatically reduce ONLY uncommitted savings targets to fit the income remaining after those obligations, never below zero.
+- Distribute an affordable monthly savings budget proportionally across eligible savings targets, using exact cents and stable remainder allocation.
+- If a savings item has a current-month ledger snapshot, treat its saved addition as already committed and do not create a second plan allocation for that item.
+- Show the saved balance unchanged, with a separate Save or Adjusted planned contribution beneath it. The monthly Balance includes the adjusted plan.
+- This adjustment is a forecast only: do not write a reduced saving into payment history, alter existing paid records, change purchases in Others or perform a withdrawal.
+- If income cannot cover non-savings spending or already committed savings, show the actual deficit: reducing planned savings cannot eliminate that shortfall.
+- Recalculate individually for each month when records or targets change; do not overwrite other months.
 - Savings balances remain separate from ordinary spendable income.
 
 BILLS
@@ -63,7 +72,8 @@ SALARY / MONTHLY FORECAST
 - Set A = total spendable IN entries applicable to the active month.
 - Set B = savings allocations + current Bills + Others + outstanding carry-forward, counted once.
 - Forecast = Set A minus Set B.
-- The currently implemented Balance display uses the latest saved entries for the current month: IN minus Bills, Others and only savings additions recorded for that month.
+- The implemented Balance uses the latest saved entries: IN minus Bills, Others, custom expenses, committed savings additions and the affordable portion of monthly savings targets.
+- Never report an artificial zero balance when obligations already exceed income.
 - Carried savings balances are never counted as spendable income or deducted again in later months.
 - Automatic unpaid carry-forward is not yet available, so the current Balance does not include unrecorded carried obligations.
 - Recalculate the displayed Balance after successful Add, Update, Delete and Refresh, and display it in the primary table's selected currency using the same verified reference rate.
