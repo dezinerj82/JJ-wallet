@@ -10,9 +10,11 @@
 <body>
   <main id="app">
     <h1>Home wallet</h1>
-    <section aria-labelledby="login-heading">
+
+    <section id="login-view" aria-labelledby="login-heading">
       <h2 id="login-heading">Login to start</h2>
       <p id="setup-status" role="status" aria-live="polite">Preparing Google sign-in...</p>
+
       <div id="sign-in-actions">
         <button type="button" id="login-button" disabled>Sign in with Google</button>
         <label class="remember-label" for="remember-browser">
@@ -20,21 +22,56 @@
           Remember this browser for faster sign-in
         </label>
       </div>
+
       <div id="unauthorized-view" hidden>
         <p id="unauthorized-account"></p>
         <p><strong>You are not authorized</strong></p>
         <button type="button" id="unauthorized-logout-button">Sign out</button>
       </div>
+
       <div id="signed-in-view" hidden>
         <p id="signed-in-account"></p>
-        <p>Wallet records are not enabled yet. Storage testing only.</p>
-        <p id="drive-status" role="status" aria-live="polite">Google Drive is not connected.</p>
-        <button type="button" id="test-storage-button" hidden>Test TXT save and read</button>
-        <div class="action-row">
+        <p id="drive-status" role="status" aria-live="polite">Checking Google Drive...</p>
+        <div class="account-actions">
           <button type="button" id="logout-button">Sign out</button>
         </div>
       </div>
     </section>
+
+    <section id="wallet-view" aria-labelledby="wallet-heading" hidden>
+      <div class="wallet-heading-row">
+        <h2 id="wallet-heading">Monthly wallet</h2>
+        <button type="button" id="refresh-wallet-button">Refresh records</button>
+      </div>
+
+      <nav class="month-nav" aria-label="Payment month">
+        <button type="button" id="month-prev-button">Previous month</button>
+        <strong id="month-label" aria-live="polite"></strong>
+        <button type="button" id="month-next-button">Next month</button>
+      </nav>
+
+      <p id="wallet-state" role="status" aria-live="polite">Loading wallet records...</p>
+      <p class="wallet-note">Read-only preview. Forecast, recurring charges and payment actions are not enabled yet.</p>
+
+      <div class="wallet-table-wrap" id="wallet-table-wrap" hidden>
+        <table class="wallet-table">
+          <caption>Entries recorded for the selected month</caption>
+          <thead>
+            <tr>
+              <th scope="col">Item</th>
+              <th scope="col">Recorded value (MYR)</th>
+              <th scope="col">Details</th>
+            </tr>
+          </thead>
+          <tbody id="wallet-table-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <details id="storage-test-tools" hidden>
+      <summary>Storage test tools</summary>
+      <button type="button" id="test-storage-button">Test TXT save and read</button>
+    </details>
   </main>
 </body>
 </html>
