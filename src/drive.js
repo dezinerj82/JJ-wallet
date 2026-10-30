@@ -422,3 +422,113 @@ export async function addWalletItem(token, folderId, entry) {
   }
   return { group: item.group, item: item.item, month: item.month };
 }
+
+
+// Updates append a complete replacement snapshot for the same item/month.
+// Historical lines are never edited or removed. The existing paid amount is
+// preserved and the unpaid amount is recalculated from the revised bill amount.
+function lastMonthSnapshot(content, group, item, month) {
+  const itemKey = item.toLocaleLowerCase("en");
+  let snapshot = null;
+  for (const line of content.split("\n")) {
+    const fields = line.replace(/\r$/, "").split("\t");
+    if (fields[0] === group &&
+        String(fields[1] || "").toLocaleLowerCase("en") === itemKey &&
+        fields[2] === month) {
+      snapshot = fields;
+    }
+  }
+  return snapshot;
+}
+
+function matchesDisplayedSnapshot(fields, previous) {
+  if (!fields || !previous || fields[0] !== previous.group ||
+      fields[1] !== previous.item || fields[2] !== previous.month ||
+      Number(fields[3]) !== previous.amount) {
+    return false;
+  }
+  if (previous.group !== "IN") {
+    if (!Number.isFinite(previous.paid) || !Number.isFinite(previous.unpaid) ||
+        Number(fields[4]) !== previous.paid ||
+        Number(fields[5]) !== previous.unpaid) {
+      return false;
+    }
+  }
+  if (previous.group === "Others") {
+    return (fields[6] || "") === (previous.retail || "") &&
+      (fields[7] || "") === (previous.url || "") &&
+      (fields[8] || "") === (previous.remark || "");
+  }
+  return true;
+}
+
+export async function updateWalletItem(token, folderId, changes) {
+  if (!token || !folderId) {
+    throw new Error("Google Drive session expired. Sign in again.");
+  }
+  const item = validateEntry(changes);
+  const prior = changes?.previous;
+  if (!prior || prior.group !== item.group || prior.item !== item.item ||
+      prior.month !== item.month) {
+    throw new Error("Item identity and payment month cannot be changed during an update.");
+  }
+
+  const filename = await itemFileName(item.group, item.item);
+  const files = await listWalletFileMetadata(token, folderId);
+  const matches = [];
+  for (const file of files) {
+    if (Number(file.size || 0) > WRITE_LIMIT) {
+      throw new Error("An item log exceeds the safe file limit. Review it first.");
+    }
+    const content = await getFileText(token, file.id);
+    if (new Blob([content]).size > WRITE_LIMIT) {
+      throw new Error("An item log exceeds the safe file limit. Review it first.");
+    }
+    if (file.name === filename || fileHasItem(content, item.group, item.item)) {
+      matches.push({ file, content });
+    }
+  }
+
+  if (matches.length !== 1) {
+    throw new Error("Could not uniquely locate this item log. Refresh before updating.");
+  }
+  const existing = matches[0];
+  if (existing.file.appProperties?.purpose !== ITEM_MARKER ||
+      !fileHasItem(existing.content, item.group, item.item)) {
+    throw new Error("This item is not an app-managed record. No changes were saved.");
+  }
+
+  const last = lastMonthSnapshot(existing.content, item.group, item.item, item.month);
+  if (!matchesDisplayedSnapshot(last, prior)) {
+    throw new Error("The item changed since it was loaded. Refresh and try again.");
+  }
+
+  const revised = item.line.slice(0, -1).split("\t");
+  if (item.group !== "IN") {
+    const previouslyPaid = Number(last[4]);
+    const newAmount = Number(revised[3]);
+    if (!Number.isFinite(previouslyPaid) || previouslyPaid < 0 ||
+        previouslyPaid > newAmount) {
+      throw new Error("New amount cannot be smaller than the already paid amount.");
+    }
+    revised[4] = previouslyPaid.toFixed(2);
+    revised[5] = (Math.round((newAmount - previouslyPaid) * 100) / 100).toFixed(2);
+  }
+
+  if (last.join("\t") === revised.join("\t")) {
+    throw new Error("No changes to save.");
+  }
+  const log = existing.content +
+    (existing.content && !existing.content.endsWith("\n") ? "\n" : "") +
+    revised.join("\t") + "\n";
+  if (new Blob([log]).size > WRITE_LIMIT) {
+    throw new Error("Item log reached its file size limit. No changes were saved.");
+  }
+
+  await replaceWalletText(token, existing.file.id, log);
+  const confirmed = await getFileText(token, existing.file.id);
+  if (confirmed !== log) {
+    throw new Error("Google Drive did not verify the updated log. Review it before retrying.");
+  }
+  return { group: item.group, item: item.item, month: item.month };
+}
