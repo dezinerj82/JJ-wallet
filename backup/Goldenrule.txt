@@ -52,6 +52,14 @@ SALARY / MONTHLY FORECAST
 - Warn about insufficient forecast funding.
 - Alert on upcoming periodic and Others items.
 
+WALLET ACCESS PROCESS
+- A successfully signed-in account is checked against the authorised wallet identity before any wallet or storage controls become available.
+- When a different account signs in, display the verified account email, a clear "You are not authorized" message and a Sign out button; do not load wallet data.
+- A returning browser may be remembered for convenient faster sign-in, but this is an opt-in preference only, not proof of identity.
+- Every new session still requires successful identity verification; never use computer name, IP address, or browser preference as a substitute for authentication.
+- Do not persist account access tokens or passwords in browser storage.
+- Private file permissions remain the ultimate data access boundary.
+
 MAIN VIEW
 - One month-based consolidated table with collapsible groups and item details.
 - Navigate current and upcoming planning months.
