@@ -220,23 +220,39 @@ export function calculateMonthlyPlan(allEntries, month) {
   // Treat it as committed and never overwrite or plan a second allocation.
   const targets = groups.Saving
     .filter(e => e.month !== month && (e.meta?.monthlySaving || 0) > 0)
-    .map(e => ({ item: e.item, targetCents: cents(e.meta.monthlySaving) }))
+    .map(e => ({
+      item: e.item,
+      targetCents: cents(e.meta.monthlySaving),
+      adjustable: e.meta?.adjustableSaving === true
+    }))
     .sort((a, b) => a.item.localeCompare(b.item));
-  let requested = 0;
+  let fixed = 0;
+  let flexibleRequested = 0;
+  const savingPlans = new Map();
   for (const target of targets) {
-    requested += target.targetCents;
-    if (!Number.isSafeInteger(requested)) throw new Error("Savings plan is too large.");
+    if (target.adjustable) flexibleRequested += target.targetCents;
+    else {
+      fixed += target.targetCents;
+      savingPlans.set(target.item, {
+        requested: target.targetCents / 100,
+        amount: target.targetCents / 100,
+        adjusted: false
+      });
+    }
+    if (!Number.isSafeInteger(fixed) ||
+        !Number.isSafeInteger(flexibleRequested)) {
+      throw new Error("Savings plan is too large.");
+    }
   }
 
-  const available = Math.max(0, income - committedSpending);
-  const budget = Math.min(available, requested);
-  const savingPlans = new Map();
-  if (requested > 0) {
-    // Exact integer-cent pro-rata allocation, with deterministic remainder
-    // distribution; total allocations never exceed the available income.
-    const parts = targets.map(target => {
-      const numerator = BigInt(target.targetCents) * BigInt(budget);
-      const denominator = BigInt(requested);
+  // Protected targets remain fixed even when the result is negative.
+  // Only explicitly adjustable, uncommitted targets can shrink.
+  const freeForFlexible = Math.max(0, income - committedSpending - fixed);
+  const flexibleBudget = Math.min(freeForFlexible, flexibleRequested);
+  if (flexibleRequested > 0) {
+    const parts = targets.filter(t => t.adjustable).map(target => {
+      const numerator = BigInt(target.targetCents) * BigInt(flexibleBudget);
+      const denominator = BigInt(flexibleRequested);
       return {
         ...target,
         allocated: Number(numerator / denominator),
@@ -244,7 +260,7 @@ export function calculateMonthlyPlan(allEntries, month) {
       };
     });
     const used = parts.reduce((total, part) => total + part.allocated, 0);
-    let leftovers = budget - used;
+    let leftovers = flexibleBudget - used;
     const byRemainder = [...parts].sort((a, b) =>
       a.remainder === b.remainder
         ? a.item.localeCompare(b.item)
@@ -252,7 +268,7 @@ export function calculateMonthlyPlan(allEntries, month) {
     );
     for (const part of byRemainder) {
       if (leftovers <= 0) break;
-      part.allocated += 1;
+      part.allocated++;
       leftovers--;
     }
     for (const part of parts) {
@@ -264,8 +280,11 @@ export function calculateMonthlyPlan(allEntries, month) {
     }
   }
 
+  const requested = fixed + flexibleRequested;
+  const budget = fixed + flexibleBudget;
   const remainingCents = income - committedSpending - budget;
-  if (!Number.isSafeInteger(remainingCents)) {
+  if (!Number.isSafeInteger(requested) || !Number.isSafeInteger(budget) ||
+      !Number.isSafeInteger(remainingCents)) {
     throw new Error("Monthly balance is too large.");
   }
   return {
@@ -276,7 +295,7 @@ export function calculateMonthlyPlan(allEntries, month) {
     plannedSavings: budget / 100,
     balance: remainingCents / 100,
     savingPlans,
-    savingsAdjusted: budget < requested,
+    savingsAdjusted: flexibleBudget < flexibleRequested,
     insufficientForBills: income < committedSpending
   };
 }
