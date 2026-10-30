@@ -60,7 +60,6 @@ const itemProgressText = document.getElementById("item-progress-text");
 const walletTableWrap = document.getElementById("wallet-table-wrap");
 const walletTableBody = document.getElementById("wallet-table-body");
 const walletBalanceRow = document.getElementById("wallet-balance-row");
-const walletBalanceWarning = document.getElementById("wallet-balance-warning");
 const walletUnpaidOutput = document.getElementById("wallet-unpaid");
 const walletUnpaidAmount = document.getElementById("wallet-unpaid-amount");
 const walletBalanceOutput = document.getElementById("wallet-balance");
@@ -310,7 +309,6 @@ function resetWallet() {
   walletBalanceReady = false;
   walletBalanceComplete = false;
   walletBalanceRow.hidden = true;
-  walletBalanceWarning.hidden = true;
   walletBalanceAmount.textContent = "—";
   walletBalanceOutput.removeAttribute("title");
   walletView.hidden = true;
@@ -623,7 +621,6 @@ function renderBalance() {
   }
   try {
     const plan = calculateMonthlyPlan(walletEntries, currentMonth);
-    walletBalanceWarning.hidden = !plan.insufficientForBills;
     walletBalanceOutput.classList.toggle("balance-negative", plan.balance < 0);
     const unpaid = calculateUnpaidForMonth(walletEntries,currentMonth);
     walletUnpaidOutput.hidden = unpaid <= 0;
@@ -633,10 +630,7 @@ function renderBalance() {
     walletBalanceAmount.textContent = formatWalletCurrency(
       plan.balance, displayCurrencies.main, referenceRate
     );
-    walletBalanceOutput.title = plan.insufficientForBills
-      ? "Income is below committed spending."
-      : plan.savingsAdjusted ? "Savings adjusted for this month."
-      : "Planned balance, not a bank balance.";
+    walletBalanceOutput.title = "Planned balance, not a bank balance.";
   } catch {
     walletUnpaidAmount.textContent = "—";
     walletBalanceAmount.textContent = "—";
