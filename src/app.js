@@ -606,11 +606,8 @@ function openUpdateForm(entry) {
   deleteItemButton.hidden = false;
   const paid = entry.group !== "IN" && entry.paid > 0;
   deleteItemButton.disabled = paid;
-  deleteItemButton.title = paid ? "Items with recorded payments cannot be deleted" :
-    "Delete this item from " + formatMonth(entry.month);
-  addStatus.textContent = paid
-    ? "This item has a recorded payment, so it can't be deleted."
-    : "";
+  deleteItemButton.title = paid ? "Paid items can't be deleted" : "Delete item";
+  addStatus.textContent = paid ? "Paid items can't be deleted." : "";
   addPanel.hidden = false;
   addAmount.focus();
 }
@@ -642,11 +639,7 @@ deleteItemButton.addEventListener("click", async () => {
   }
   if (previous.group === "Saving" || previous.month < currentMonth) return;
 
-  const confirmed = window.confirm(
-    "Delete " + previous.item + " from " + formatMonth(previous.month) + "?\n\n" +
-    "It will disappear from this month's wallet and totals. " +
-    "Other months and the saved history will stay unchanged."
-  );
+  const confirmed = window.confirm("Are you sure?");
   if (!confirmed) return;
 
   const version = connectionVersion;
@@ -659,7 +652,7 @@ deleteItemButton.addEventListener("click", async () => {
   otherMonthsButton.disabled = true;
   refreshButton.disabled = true;
   addStatus.textContent = "";
-  setItemProgress("Deleting your item...");
+  setItemProgress("Deleting...");
 
   try {
     const result = await deleteWalletItem(token, folderId, previous);
