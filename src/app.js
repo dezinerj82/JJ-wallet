@@ -295,6 +295,7 @@ function renderComparisonMonth() {
 function closeOtherMonths(restoreFocus = true) {
   const wasOpen = !otherMonthsWindow.hidden;
   otherMonthsWindow.hidden = true;
+  document.body.classList.remove("other-months-open");
   otherMonthsButton.setAttribute("aria-expanded", "false");
   otherMonthsBody.replaceChildren();
   if (restoreFocus && wasOpen) otherMonthsButton.focus();
@@ -313,6 +314,7 @@ function openOtherMonths() {
   otherMonthsWindow.style.top = "";
   otherMonthsWindow.style.right = "";
   otherMonthsWindow.hidden = false;
+  document.body.classList.add("other-months-open");
   otherMonthsButton.setAttribute("aria-expanded", "true");
   renderComparisonMonth();
   otherMonthsClose.focus({ preventScroll: true });
