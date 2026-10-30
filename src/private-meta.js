@@ -7,7 +7,13 @@ const MONTH = /^(?:19|20|21)\d{2}(?:0[1-9]|1[0-2])$/;
 export function validMeta(meta) {
   const target = meta?.monthlySaving ?? 0;
   const openingBalance = meta?.openingBalance ?? null;
+  const holdPriority = meta?.holdPriority ?? null;
   return !!meta &&
+    typeof (meta.adjustableSaving ?? false) === "boolean" &&
+    (meta.group === "Saving" || meta.adjustableSaving !== true) &&
+    (holdPriority === null ||
+      (meta.group === "Bills" && Number.isInteger(holdPriority) &&
+       holdPriority >= 0 && holdPriority <= 5)) &&
     (openingBalance === null ||
       (meta.group === "Saving" && Number.isFinite(openingBalance) &&
        openingBalance >= 0 && Number.isSafeInteger(Math.round(openingBalance * 100)) &&
@@ -40,7 +46,11 @@ export function buildMeta(group, item, input = {}) {
     monthlySaving: group === "Saving" ? Number(input.monthlySaving || 0) : 0,
     openingBalance: group === "Saving" && input.openingBalance != null
       ? Number(input.openingBalance) : null,
-    hoverUnpaid: group !== "Saving" && input.hoverUnpaid === true
+    hoverUnpaid: group !== "Saving" && input.hoverUnpaid === true,
+    adjustableSaving: group === "Saving" && input.adjustableSaving === true,
+    holdPriority: group === "Bills" && input.holdPriority !== undefined &&
+      input.holdPriority !== null && input.holdPriority !== ""
+      ? Number(input.holdPriority) : null
   };
   if (!validMeta(meta)) throw new Error("Check the item details.");
   return meta;
@@ -64,6 +74,12 @@ export function parseMetaLine(line) {
     }
     if (value && typeof value === "object" && value.openingBalance === undefined) {
       value.openingBalance = null;
+    }
+    if (value && typeof value === "object" && value.adjustableSaving === undefined) {
+      value.adjustableSaving = false;
+    }
+    if (value && typeof value === "object" && value.holdPriority === undefined) {
+      value.holdPriority = null;
     }
     return validMeta(value) ? value : null;
   } catch {
