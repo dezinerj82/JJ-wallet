@@ -905,3 +905,31 @@ select:focus-visible {
   min-height: 2.35rem; padding: .53rem 1.05rem; font-size: .9rem;
 }
 @media (max-width: 600px) { .add-grid .full-field { grid-column: auto; } }
+
+.wallet-item-note {
+  display: inline-block;
+  max-width: 100%;
+  border-bottom: 1px dotted var(--soft-indigo);
+  cursor: help;
+}
+.wallet-item-note:focus-visible {
+  outline: 2px solid var(--soft-indigo);
+}
+.hover-tooltip {
+  position: fixed;
+  z-index: 60;
+  max-width: min(21rem, 78vw);
+  min-width: 10rem;
+  padding: .8rem 1rem;
+  border-radius: 14px;
+  border: 1px solid #d5dce5;
+  background: var(--paper);
+  color: #253068;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+  text-align: left;
+  line-height: 1.45;
+  font-size: .9rem;
+  pointer-events: none;
+  box-shadow: 0 10px 26px rgba(32, 49, 75, .19);
+}
