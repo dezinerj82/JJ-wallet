@@ -1,10 +1,7 @@
-import {
-  initialiseGoogleLogin, signIn, signOut, connectDrive, getDriveToken
-} from "./auth.js";
+import { initialiseGoogleLogin, signIn, signOut, getDriveToken } from "./auth.js";
 import { findBillsFolder, testTextStorage } from "./drive.js";
 
 const TRUST_KEY = "home-wallet-remember-browser-v1";
-
 const status = document.getElementById("setup-status");
 const signInActions = document.getElementById("sign-in-actions");
 const loginButton = document.getElementById("login-button");
@@ -16,7 +13,6 @@ const unauthorizedAccount = document.getElementById("unauthorized-account");
 const unauthorizedLogoutButton = document.getElementById("unauthorized-logout-button");
 const logoutButton = document.getElementById("logout-button");
 const driveStatus = document.getElementById("drive-status");
-const connectButton = document.getElementById("connect-drive-button");
 const testStorageButton = document.getElementById("test-storage-button");
 
 let activeFolderId = null;
@@ -30,11 +26,11 @@ function readRememberedBrowser() {
 }
 
 function setRememberedBrowser(remember) {
-  // A convenience preference only — never a credential or access token.
+  // This stores a convenience preference only, never proof of authentication.
   try {
     if (remember) localStorage.setItem(TRUST_KEY, "yes");
     else localStorage.removeItem(TRUST_KEY);
-  } catch { /* private browsing may block storage */ }
+  } catch { /* Private browsing may block preference storage. */ }
 }
 
 rememberBrowser.checked = readRememberedBrowser();
@@ -53,7 +49,6 @@ function showSignedOut(message = "Sign in with your Google account.") {
   signedInAccount.textContent = "";
   unauthorizedAccount.textContent = "";
   driveStatus.textContent = "Google Drive is not connected.";
-  connectButton.disabled = false;
   testStorageButton.hidden = true;
   testStorageButton.disabled = false;
   status.textContent = message;
@@ -70,13 +65,11 @@ function showSignedIn(email) {
   signedInView.hidden = false;
   signedInAccount.textContent = "Signed in as " + email;
   status.textContent = "Google identity confirmed.";
-  driveStatus.textContent = "Google Drive is not connected.";
-  connectButton.disabled = false;
+  driveStatus.textContent = "Checking private Drive storage...";
   testStorageButton.hidden = true;
 }
 
 function showUnauthorized(email) {
-  // Google verified an identity, but it is not in the wallet owner's allowlist.
   signOut();
   attemptedFastLogin = false;
   selectingAccountRequired = true;
@@ -88,37 +81,32 @@ function showUnauthorized(email) {
   unauthorizedView.hidden = false;
   unauthorizedAccount.textContent = "Signed in as " + email;
   status.textContent = "Google identity confirmed.";
-}
-
-async function checkFolder() {
-  driveStatus.textContent = "Looking for your private Wallet bills folder...";
-  const folder = await findBillsFolder(getDriveToken());
-  if (!getDriveToken()) throw new Error("Google Drive session expired. Reconnect Google Drive.");
-  if (!folder) {
-    activeFolderId = null;
-    testStorageButton.hidden = true;
-    driveStatus.textContent =
-      "Wallet bills folder not found. If you moved it, check access and reconnect; no new folder was created.";
-    return;
-  }
-  // The folder is recognized by its app marker, even after moving or renaming it.
-  activeFolderId = folder.id;
-  testStorageButton.hidden = false;
-  driveStatus.textContent = folder.name === "Wallet bills"
-    ? "Google Drive connected. Wallet bills folder found."
-    : "Drive connected to existing folder: " + folder.name + ". Rename it to Wallet bills in Drive.";
+  testStorageButton.hidden = true;
 }
 
 async function onDriveReady() {
-  connectButton.disabled = true;
   try {
-    await checkFolder();
+    const token = getDriveToken();
+    if (!token) throw new Error("Drive session unavailable. Please sign out and sign in again.");
+    const folder = await findBillsFolder(token);
+    if (!getDriveToken()) throw new Error("Drive session expired. Please sign out and sign in again.");
+    if (!folder) {
+      activeFolderId = null;
+      testStorageButton.hidden = true;
+      driveStatus.textContent =
+        "Wallet bills folder not found. Check its name and Drive access. No folder was created.";
+      return;
+    }
+    activeFolderId = folder.id;
+    testStorageButton.hidden = false;
+    driveStatus.textContent = folder.name === "Wallet bills"
+      ? "Google Drive connected. Wallet bills folder found."
+      : "Drive connected to existing folder: " + folder.name +
+        ". Rename it to Wallet bills in Drive.";
   } catch (error) {
     activeFolderId = null;
     testStorageButton.hidden = true;
     driveStatus.textContent = error.message || "Google Drive could not be checked.";
-  } finally {
-    connectButton.disabled = false;
   }
 }
 
@@ -132,7 +120,7 @@ loginButton.addEventListener("click", () => {
     const fast = rememberBrowser.checked && !selectingAccountRequired;
     attemptedFastLogin = fast;
     status.textContent = fast ? "Trying faster Google sign-in..." : "Opening Google sign-in...";
-    // The request is synchronous with the click so Google can open a login popup.
+    // The OAuth popup is requested synchronously from this click.
     signIn({ fast });
   } catch (error) {
     selectingAccountRequired = true;
@@ -140,20 +128,9 @@ loginButton.addEventListener("click", () => {
   }
 });
 
-connectButton.addEventListener("click", () => {
-  try {
-    driveStatus.textContent = "Opening Google Drive permission...";
-    connectButton.disabled = true;
-    connectDrive();
-  } catch (error) {
-    connectButton.disabled = false;
-    driveStatus.textContent = error.message;
-  }
-});
-
 testStorageButton.addEventListener("click", async () => {
   if (!activeFolderId) {
-    driveStatus.textContent = "Connect the private Wallet bills folder first.";
+    driveStatus.textContent = "Sign in to access the Wallet bills folder first.";
     return;
   }
   testStorageButton.disabled = true;
@@ -171,7 +148,6 @@ testStorageButton.addEventListener("click", async () => {
 
 function logout() {
   signOut();
-  // Signing out deliberately removes the remembered-browser preference.
   setRememberedBrowser(false);
   rememberBrowser.checked = false;
   selectingAccountRequired = false;
@@ -197,7 +173,8 @@ try {
     },
     onDriveReady,
     onDriveError: message => {
-      connectButton.disabled = false;
+      activeFolderId = null;
+      testStorageButton.hidden = true;
       driveStatus.textContent = message;
     }
   });
