@@ -1,4 +1,4 @@
-/* Functional login layout only; full visual design is not implemented. */
+/* Only functional login/Drive connection controls. Full design is not yet implemented. */
 :root {
   font-family: Arial, sans-serif;
   color: #006d77;
@@ -19,7 +19,9 @@ button {
   font-weight: 700;
   cursor: pointer;
   box-shadow: 0 4px 9px rgba(0, 109, 119, 0.14);
+  margin: 0.3rem 0.25rem 0.3rem 0;
 }
 button:disabled { opacity: 0.55; cursor: wait; box-shadow: none; }
 button:focus-visible { outline: 3px solid #e29578; outline-offset: 3px; }
+.action-row { margin-top: 1rem; }
 [hidden] { display: none !important; }
