@@ -92,6 +92,9 @@ export function serviceReminders(metaMap, entries = [], now = new Date()) {
   const dueItems = [];
   for (const meta of metaMap.values()) {
     if (!meta.lastService || !meta.interval || !meta.remindBefore) continue;
+    if (!entries.some(entry => entry.group === meta.group &&
+        entry.item.toLocaleLowerCase("en") ===
+          meta.item.toLocaleLowerCase("en"))) continue;
     const serviceMonth = effectiveServiceMonth(meta, entries, now);
     const last = Number(serviceMonth.slice(0,4)) * 12 + Number(serviceMonth.slice(4,6)) - 1;
     const next = last + meta.interval;
