@@ -6,7 +6,8 @@ const MONTH = /^(?:19|20|21)\d{2}(?:0[1-9]|1[0-2])$/;
 
 export function validMeta(meta) {
   const target = meta?.monthlySaving ?? 0;
-  return !!meta && Number.isFinite(target) && target >= 0 &&
+  return !!meta && typeof (meta.hoverUnpaid ?? false) === "boolean" &&
+    Number.isFinite(target) && target >= 0 &&
     Number.isSafeInteger(Math.round(target * 100)) &&
     Math.abs(target * 100 - Math.round(target * 100)) < 0.000001 &&
     (meta.group === "Saving" || target === 0) &&
@@ -30,7 +31,8 @@ export function buildMeta(group, item, input = {}) {
     interval: Number(input.interval || 0),
     remindBefore: Number(input.remindBefore || 0),
     access: group === "Saving" ? String(input.access || "protected") : "",
-    monthlySaving: group === "Saving" ? Number(input.monthlySaving || 0) : 0
+    monthlySaving: group === "Saving" ? Number(input.monthlySaving || 0) : 0,
+    hoverUnpaid: group !== "Saving" && input.hoverUnpaid === true
   };
   if (!validMeta(meta)) throw new Error("Check the item details.");
   return meta;
@@ -48,6 +50,9 @@ export function parseMetaLine(line) {
     // Earlier settings predate monthly savings targets; default them to zero.
     if (value && typeof value === "object" && value.monthlySaving === undefined) {
       value.monthlySaving = 0;
+    }
+    if (value && typeof value === "object" && value.hoverUnpaid === undefined) {
+      value.hoverUnpaid = false;
     }
     return validMeta(value) ? value : null;
   } catch {
@@ -107,8 +112,10 @@ export function serviceReminders(metaMap, entries = [], now = new Date()) {
           meta.item.toLocaleLowerCase("en"))) continue;
     const serviceMonth = effectiveServiceMonth(meta, entries, now);
     const last = Number(serviceMonth.slice(0,4)) * 12 + Number(serviceMonth.slice(4,6)) - 1;
-    const next = last + meta.interval;
-    if (current >= next - meta.remindBefore) {
+    let next = last + meta.interval;
+    // Skip old reminder windows, including missed service dates.
+    while (next <= current) next += meta.interval;
+    if (current === next - meta.remindBefore) {
       const date = new Date(Math.floor(next / 12), next % 12, 1);
       const dueMonth = String(date.getFullYear()) + String(date.getMonth() + 1).padStart(2,"0");
       dueItems.push({ group: meta.group, item: meta.item, dueMonth });
