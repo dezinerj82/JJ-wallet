@@ -983,3 +983,10 @@ select:focus-visible {
   font-size: clamp(.7rem, 1.8cqi, .81rem);
   white-space: normal;
 }
+
+.wallet-balance-row { gap: .7rem; }
+.wallet-balance-warning {
+  color: #87422e;
+  font-size: .86rem;
+  font-weight: 600;
+}
