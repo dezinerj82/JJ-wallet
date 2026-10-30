@@ -23,6 +23,7 @@ let signInReady = false;
 let editingEntry = null;
 let editingSavings = null;
 let withdrawApproved = false;
+let lastAddGroup = "IN";
 let walletMetadata = new Map();
 const reminderSeen = new Set();
 let walletProgressTicket = 0;
@@ -274,6 +275,13 @@ function resetWallet() {
   setItemProgress();
   activeFolderId = null;
   walletEntries = [];
+  walletMetadata = new Map();
+  reminderSeen.clear();
+  withdrawApproved = false;
+  savingsPanel.hidden = true;
+  editingSavings = null;
+  if (walletDialog.open) walletDialog.close("cancel");
+  hideItemTooltip();
   walletBalanceReady = false;
   walletBalanceComplete = false;
   walletBalanceRow.hidden = true;
@@ -621,6 +629,7 @@ async function loadWalletRecords(message = "Refreshing your items...") {
     if (version !== connectionVersion || !getDriveToken()) return;
     const parsed = parseWalletFiles(files);
     walletEntries = parsed.entries;
+    walletMetadata = parseAllMetadata(files);
     walletBalanceReady = true;
     walletBalanceComplete = parsed.invalidLines === 0 && !recurringError;
     renderMonth();
@@ -632,10 +641,12 @@ async function loadWalletRecords(message = "Refreshing your items...") {
       setWalletMessage("Some records couldn't be loaded. Press Refresh.", true);
     } else {
       setWalletMessage("");
+      void showDueServiceReminders();
     }
   } catch (error) {
     if (version !== connectionVersion) return;
     walletEntries = [];
+    walletMetadata = new Map();
     walletBalanceReady = false;
     walletBalanceComplete = false;
     walletBalanceRow.hidden = true;
@@ -787,7 +798,7 @@ function enteredPrivateMeta(group, item) {
     remindBefore: Number(addRemindBefore.value)
   };
   const hasDetails = Boolean(input.note.trim() || input.lastService ||
-    input.interval || input.remindBefore);
+    input.interval || input.remindBefore || editingEntry?.meta);
   return hasDetails ? buildMeta(group, item, input) : null;
 }
 
@@ -802,6 +813,8 @@ function fillPrivateMeta(meta) {
 
 function closeAddPanel() {
   addPanel.hidden = true;
+  withdrawApproved = false;
+  lastAddGroup = "IN";
   setItemProgress();
   cancelItemButton.disabled = false;
   deleteItemButton.hidden = true;
@@ -815,6 +828,10 @@ function closeAddPanel() {
   addStatus.textContent = "";
   addForm.reset();
   addRecurring.checked = false;
+  addCategoryName.required = false;
+  addName.required = false;
+  addItemSelect.required = false;
+  addOptions.open = false;
   submitItemButton.disabled = false;
 }
 
@@ -829,6 +846,7 @@ function openUpdateForm(entry) {
   editingEntry = { ...entry };
   addHeading.textContent = "Update item";
   submitItemButton.textContent = "Update";
+  populateCategoryChoices();
   addGroup.value = entry.group;
   addGroup.disabled = true;
   addName.value = entry.item;
@@ -841,6 +859,8 @@ function openUpdateForm(entry) {
   addUrl.value = entry.url || "";
   addRemark.value = entry.remark || "";
   updateOptionalFields();
+  syncItemChoice();
+  fillPrivateMeta(entry.meta);
   addRecurring.checked = entry.group === "Bills" && entry.recurring === true;
   deleteItemButton.hidden = false;
   const paid = entry.group !== "IN" && entry.paid > 0;
@@ -857,16 +877,39 @@ addButton.addEventListener("click", () => {
     return;
   }
   closeAddPanel();
+  savingsPanel.hidden = true;
+  editingSavings = null;
+  populateCategoryChoices();
   addGroup.value = "IN";
+  lastAddGroup = "IN";
   addMonth.min = currentMonth.slice(0, 4) + "-" + currentMonth.slice(4);
   addMonth.value = selectedMonth.slice(0, 4) + "-" + selectedMonth.slice(4);
   updateOptionalFields();
   addStatus.textContent = "";
   addPanel.hidden = false;
-  addName.focus();
+  if (addNameField.hidden) addItemSelect.focus();
+  else addName.focus();
 });
 
-addGroup.addEventListener("change", updateOptionalFields);
+addGroup.addEventListener("change", async () => {
+  if (addGroup.value === "Withdraw") {
+    const accepted = await confirmWallet("Are you sure?");
+    if (!accepted) {
+      addGroup.value = lastAddGroup;
+      updateOptionalFields();
+      return;
+    }
+    withdrawApproved = true;
+  } else {
+    withdrawApproved = false;
+  }
+  lastAddGroup = addGroup.value;
+  updateOptionalFields();
+});
+addCategoryName.addEventListener("change", () => {
+  if (addGroup.value === NEW_CATEGORY) populateItemChoices();
+});
+addItemSelect.addEventListener("change", syncItemChoice);
 cancelItemButton.addEventListener("click", closeAddPanel);
 
 deleteItemButton.addEventListener("click", async () => {
