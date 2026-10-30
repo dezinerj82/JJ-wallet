@@ -750,3 +750,144 @@ export async function renewRecurringBills(token, folderId, files) {
   }
   return changed;
 }
+
+
+// Saving controls and withdrawals preserve append-only balances in the same
+// private file. Only an item explicitly marked accessible can be withdrawn.
+function latestSavingRow(content, item, throughMonth) {
+  let result = null;
+  const key = item.toLocaleLowerCase("en");
+  for (const line of content.split("\n")) {
+    const parts = line.replace(/\r$/, "").split("\t");
+    if (parts[0] !== "Saving" ||
+        String(parts[1] || "").toLocaleLowerCase("en") !== key ||
+        !/^(?:19|20|21)\d{2}(?:0[1-9]|1[0-2])$/.test(parts[2]) ||
+        parts[2] > throughMonth || parts.length < 6) continue;
+    const values = parts.slice(3, 6).map(Number);
+    if (!values.every(v => Number.isFinite(v) && v >= 0)) continue;
+    if (!result || parts[2] >= result.month) {
+      result = {
+        month: parts[2], added: values[0], withdrawn: values[1],
+        balance: values[2], remark: parts[6] || ""
+      };
+    }
+  }
+  return result;
+}
+
+async function findOneItemFile(token, folderId, group, item) {
+  const filename = await itemFileName(group, item);
+  const files = await listWalletFileMetadata(token, folderId);
+  const matches = [];
+  for (const file of files) {
+    if (Number(file.size || 0) > WRITE_LIMIT) {
+      throw new Error("Item history is too large.");
+    }
+    const text = await getFileText(token, file.id);
+    if (new Blob([text]).size > WRITE_LIMIT) throw new Error("Item history is too large.");
+    if (file.name === filename || fileHasItem(text, group, item)) {
+      matches.push({file, text});
+    }
+  }
+  if (matches.length !== 1 ||
+      !fileHasItem(matches[0].text, group, item) ||
+      (matches[0].file.appProperties?.purpose &&
+       matches[0].file.appProperties.purpose !== ITEM_MARKER)) {
+    throw new Error("Item not found. Press Refresh.");
+  }
+  return matches[0];
+}
+
+async function writeVerifiedItem(token, file, original, additions) {
+  if (!additions) return;
+  const expected = original + (original && !original.endsWith("\n") ? "\n" : "") + additions;
+  if (new Blob([expected]).size > WRITE_LIMIT) {
+    throw new Error("Item history is full.");
+  }
+  await replaceWalletText(token, file.id, expected);
+  const confirmed = await getFileText(token, file.id);
+  if (confirmed !== expected) {
+    throw new Error("Couldn't verify the save. Press Refresh.");
+  }
+}
+
+export async function saveSavingSettings(token, folderId, previous, input) {
+  if (!token || !folderId) throw new Error("Sign in again.");
+  if (previous?.group !== "Saving" ||
+      !previous.item || !Number.isFinite(previous.balance)) {
+    throw new Error("Select a savings item.");
+  }
+  const existing = await findOneItemFile(token, folderId, "Saving", previous.item);
+  const now = new Date();
+  const current = String(now.getFullYear()) +
+    String(now.getMonth() + 1).padStart(2, "0");
+  const latest = latestSavingRow(existing.text, previous.item, current);
+  if (!latest || latest.balance !== previous.balance ||
+      latest.month !== previous.month) {
+    throw new Error("Savings changed. Press Refresh.");
+  }
+  const meta = buildMeta("Saving", previous.item, {
+    ...input, access: input?.access === "accessible" ? "accessible" : "protected",
+    interval: 0, remindBefore: 0, lastService: ""
+  });
+  const old = lastMeta(existing.text, "Saving", previous.item);
+  if (JSON.stringify(old) !== JSON.stringify(previous.meta || null)) {
+    throw new Error("Savings settings changed. Press Refresh.");
+  }
+  if (JSON.stringify(old) === JSON.stringify(meta)) {
+    throw new Error("No changes to save.");
+  }
+  await writeVerifiedItem(token, existing.file, existing.text, metaLine(meta));
+  return { group: "Saving", item: previous.item };
+}
+
+export async function withdrawSavingItem(token, folderId, selection) {
+  if (!token || !folderId) throw new Error("Sign in again.");
+  const item = selection?.item;
+  const previous = selection?.previous;
+  const raw = String(selection?.amount ?? "");
+  if (typeof item !== "string" || !item || item.length > 120 ||
+      /[\t\r\n]/.test(item) || previous?.group !== "Saving" ||
+      previous.item !== item || !/^(?:0|[1-9]\d{0,11})(?:\.\d{1,2})?$/.test(raw) ||
+      Number(raw) <= 0) {
+    throw new Error("Enter a valid withdrawal.");
+  }
+  const amountCents = Math.round(Number(raw) * 100);
+  if (!Number.isSafeInteger(amountCents)) throw new Error("Amount is too large.");
+
+  const currentDate = new Date();
+  const month = String(currentDate.getFullYear()) +
+    String(currentDate.getMonth() + 1).padStart(2, "0");
+  const existing = await findOneItemFile(token, folderId, "Saving", item);
+  const meta = lastMeta(existing.text, "Saving", item);
+  if (meta?.access !== "accessible") {
+    throw new Error("This savings account is protected.");
+  }
+  if (JSON.stringify(meta) !== JSON.stringify(previous.meta || null)) {
+    throw new Error("Savings settings changed. Press Refresh.");
+  }
+  const last = latestSavingRow(existing.text, item, month);
+  if (!last || last.month !== previous.month ||
+      last.balance !== previous.balance) {
+    throw new Error("Savings changed. Press Refresh.");
+  }
+  const originalCents = Math.round(last.balance * 100);
+  if (!Number.isSafeInteger(originalCents) || amountCents > originalCents) {
+    throw new Error("Not enough savings.");
+  }
+  const thisMonth = last.month === month;
+  const added = thisMonth ? last.added : 0;
+  const withdrawn = (thisMonth ? last.withdrawn : 0) + amountCents / 100;
+  const balance = (originalCents - amountCents) / 100;
+  if (!Number.isSafeInteger(Math.round(withdrawn * 100))) {
+    throw new Error("Amount is too large.");
+  }
+  const remark = String(selection?.remark || "").trim();
+  if (remark.length > 300 || /[\t\r\n]/.test(remark)) throw new Error("Check the note.");
+  const fields = ["Saving", item, month, added.toFixed(2),
+    withdrawn.toFixed(2), balance.toFixed(2)];
+  const savedRemark = remark || (thisMonth ? last.remark : "");
+  if (savedRemark) fields.push(savedRemark);
+  await writeVerifiedItem(token, existing.file, existing.text, fields.join("\t") + "\n");
+  return {group: "Saving", item, month};
+}
