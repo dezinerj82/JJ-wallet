@@ -1091,7 +1091,7 @@ walletDownloadTemplate.addEventListener("click", () => {
   document.body.append(a);
   a.click();
   a.remove();
-  URL.revokeObjectURL(url);
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
 });
 
 walletSetupButton.addEventListener("click", () => {
