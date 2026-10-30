@@ -176,7 +176,7 @@ export function parseWalletFiles(files) {
   };
 }
 
-export function entriesForMonth(allEntries, month) {
+export function entriesForMonth(allEntries, month, asOf = new Date()) {
   if (!MONTH_RE.test(month)) throw new Error("Invalid month.");
   const groupList = availableGroups(allEntries);
   const groups = Object.fromEntries(groupList.map(group => [group, []]));
@@ -196,9 +196,12 @@ export function entriesForMonth(allEntries, month) {
   groups.Saving = [...latestSavings.values()];
   // Older unpaid obligations follow into later months as views, not TXT rows.
   if (month >= CARRY_START_MONTH) {
+    const today = monthKey(asOf);
     for (const entry of allEntries) {
+      // Do not assume a future month's bill will remain unpaid.
       if (!isExpenseGroup(entry.group) || entry.month >= month ||
-          entry.month < CARRY_START_MONTH || !groups[entry.group]) continue;
+          entry.month >= today || entry.month < CARRY_START_MONTH ||
+          !groups[entry.group]) continue;
       const amount = effectiveUnpaid(entry, month);
       if (amount <= 0) continue;
       groups[entry.group].push({
@@ -216,8 +219,8 @@ export function entriesForMonth(allEntries, month) {
 
 // Savings targets are plans, never recorded deposits. Bills and already saved
 // amounts remain untouched. Reduce only still-uncommitted monthly targets.
-export function calculateMonthlyPlan(allEntries, month) {
-  const groups = entriesForMonth(allEntries, month);
+export function calculateMonthlyPlan(allEntries, month, asOf = new Date()) {
+  const groups = entriesForMonth(allEntries, month, asOf);
   function cents(value) {
     if (!Number.isFinite(value) || value < 0 ||
         !Number.isSafeInteger(Math.round(value * 100))) {
@@ -331,12 +334,12 @@ export function calculateMonthlyPlan(allEntries, month) {
   };
 }
 
-export function calculateMonthlyBalance(allEntries, month) {
-  return calculateMonthlyPlan(allEntries, month).balance;
+export function calculateMonthlyBalance(allEntries, month, asOf = new Date()) {
+  return calculateMonthlyPlan(allEntries, month, asOf).balance;
 }
 
-export function calculateUnpaidForMonth(allEntries, month) {
-  const groups = entriesForMonth(allEntries, month);
+export function calculateUnpaidForMonth(allEntries, month, asOf = new Date()) {
+  const groups = entriesForMonth(allEntries, month, asOf);
   let cents = 0;
   for (const group of availableGroups(allEntries).filter(isExpenseGroup)) {
     for (const item of groups[group]) {
@@ -350,11 +353,11 @@ export function calculateUnpaidForMonth(allEntries, month) {
 // "Hold" is guidance only. Never change the saved bill or its payment.
 // Private ranking is not displayed; paid, essential and purchased items
 // cannot be marked for postponement.
-export function suggestedHolds(allEntries, month) {
-  const plan = calculateMonthlyPlan(allEntries, month);
+export function suggestedHolds(allEntries, month, asOf = new Date()) {
+  const plan = calculateMonthlyPlan(allEntries, month, asOf);
   const held = new Set();
   if (plan.balance >= 0) return held;
-  const rows = entriesForMonth(allEntries, month).Bills
+  const rows = entriesForMonth(allEntries, month, asOf).Bills
     .filter(row => !row.carryOver && row.month === month &&
       row.paid === 0 && row.unpaid > 0 &&
       Number.isInteger(row.meta?.holdPriority) &&
