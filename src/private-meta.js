@@ -8,7 +8,9 @@ export function validMeta(meta) {
   const target = meta?.monthlySaving ?? 0;
   const openingBalance = meta?.openingBalance ?? null;
   const holdPriority = meta?.holdPriority ?? null;
+  const start = meta?.savingFromMonth ?? (meta?.group === "Saving" ? "202611" : "");
   return !!meta &&
+    (meta.group === "Saving" ? MONTH.test(start) : start === "") &&
     typeof (meta.adjustableSaving ?? false) === "boolean" &&
     (meta.group === "Saving" || meta.adjustableSaving !== true) &&
     (holdPriority === null ||
@@ -44,6 +46,8 @@ export function buildMeta(group, item, input = {}) {
     remindBefore: Number(input.remindBefore || 0),
     access: group === "Saving" ? String(input.access || "protected") : "",
     monthlySaving: group === "Saving" ? Number(input.monthlySaving || 0) : 0,
+    savingFromMonth: group === "Saving" ?
+      String(input.savingFromMonth || "202611") : "",
     openingBalance: group === "Saving" && input.openingBalance != null
       ? Number(input.openingBalance) : null,
     hoverUnpaid: group !== "Saving" && input.hoverUnpaid === true,
@@ -80,6 +84,9 @@ export function parseMetaLine(line) {
     }
     if (value && typeof value === "object" && value.holdPriority === undefined) {
       value.holdPriority = null;
+    }
+    if (value && typeof value === "object" && value.savingFromMonth === undefined) {
+      value.savingFromMonth = value.group === "Saving" ? "202611" : "";
     }
     return validMeta(value) ? value : null;
   } catch {
