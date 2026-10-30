@@ -5,7 +5,12 @@ const PREFIX = "@META\t";
 const MONTH = /^(?:19|20|21)\d{2}(?:0[1-9]|1[0-2])$/;
 
 export function validMeta(meta) {
-  return !!meta && isWalletGroup(meta.group) &&
+  const target = meta?.monthlySaving ?? 0;
+  return !!meta && Number.isFinite(target) && target >= 0 &&
+    Number.isSafeInteger(Math.round(target * 100)) &&
+    Math.abs(target * 100 - Math.round(target * 100)) < 0.000001 &&
+    (meta.group === "Saving" || target === 0) &&
+    isWalletGroup(meta.group) &&
     typeof meta.item === "string" && meta.item.trim().length > 0 &&
     meta.item.length <= 120 && !/[\t\r\n]/.test(meta.item) &&
     typeof meta.note === "string" && meta.note.length <= 1600 &&
@@ -24,7 +29,8 @@ export function buildMeta(group, item, input = {}) {
     lastService: String(input.lastService || ""),
     interval: Number(input.interval || 0),
     remindBefore: Number(input.remindBefore || 0),
-    access: group === "Saving" ? String(input.access || "protected") : ""
+    access: group === "Saving" ? String(input.access || "protected") : "",
+    monthlySaving: group === "Saving" ? Number(input.monthlySaving || 0) : 0
   };
   if (!validMeta(meta)) throw new Error("Check the item details.");
   return meta;
@@ -39,6 +45,10 @@ export function parseMetaLine(line) {
   if (typeof line !== "string" || !line.startsWith(PREFIX)) return null;
   try {
     const value = JSON.parse(line.slice(PREFIX.length).replace(/\r$/, ""));
+    // Earlier settings predate monthly savings targets; default them to zero.
+    if (value && typeof value === "object" && value.monthlySaving === undefined) {
+      value.monthlySaving = 0;
+    }
     return validMeta(value) ? value : null;
   } catch {
     return null;
