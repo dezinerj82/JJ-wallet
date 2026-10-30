@@ -1,5 +1,5 @@
-import { initialiseGoogleLogin, signIn, signOut, getDriveToken } from "./auth.js";
-import { findBillsFolder, readWalletTextFiles } from "./drive.js";
+import { initialiseGoogleLogin, restoreLoginSession, signIn, signOut, getDriveToken } from "./auth.js";
+import { findBillsFolder, readWalletTextFiles, addWalletItem } from "./drive.js";
 import {
   WALLET_GROUPS, parseWalletFiles, entriesForMonth,
   monthKey, shiftedMonthKey, formatMonth, formatAmount
@@ -34,6 +34,22 @@ const monthLabel = document.getElementById("month-label");
 const prevButton = document.getElementById("month-prev-button");
 const nextButton = document.getElementById("month-next-button");
 const refreshButton = document.getElementById("refresh-wallet-button");
+const addButton = document.getElementById("add-item-button");
+const addPanel = document.getElementById("add-item-panel");
+const addForm = document.getElementById("add-item-form");
+const addGroup = document.getElementById("add-item-group");
+const addName = document.getElementById("add-item-name");
+const addMonth = document.getElementById("add-item-month");
+const addAmount = document.getElementById("add-item-amount");
+const addRetailField = document.getElementById("add-retail-field");
+const addUrlField = document.getElementById("add-url-field");
+const addRemarkField = document.getElementById("add-remark-field");
+const addRetail = document.getElementById("add-item-retail");
+const addUrl = document.getElementById("add-item-url");
+const addRemark = document.getElementById("add-item-remark");
+const addStatus = document.getElementById("add-item-status");
+const submitItemButton = document.getElementById("submit-item-button");
+const cancelItemButton = document.getElementById("cancel-item-button");
 
 function readRememberedBrowser() {
   try { return localStorage.getItem(TRUST_KEY) === "yes"; }
@@ -71,6 +87,11 @@ function resetWallet() {
   walletView.hidden = true;
   walletTableWrap.hidden = true;
   walletTableBody.replaceChildren();
+  addPanel.hidden = true;
+  addForm.reset();
+  addButton.disabled = true;
+  submitItemButton.disabled = false;
+  addStatus.textContent = "";
   setWalletMessage("");
   selectedMonth = currentMonth;
 }
@@ -151,6 +172,16 @@ function renderMonth() {
     rows.append(headingRow);
 
     if (!expanded) continue;
+    if (!entries.length) {
+      const empty = document.createElement("tr");
+      empty.className = "empty-row";
+      const cell = document.createElement("td");
+      cell.colSpan = 3;
+      cell.textContent = "No items";
+      empty.append(cell);
+      rows.append(empty);
+      continue;
+    }
     for (const entry of entries) {
       const row = document.createElement("tr");
       addTextCell(row, entry.item, "wallet-item");
@@ -163,6 +194,11 @@ function renderMonth() {
       } else if (entry.group === "Bills" || entry.group === "Others") {
         description = "Paid: " + formatAmount(entry.paid) +
           " · Unpaid: " + formatAmount(entry.unpaid);
+        if (entry.group === "Others") {
+          if (entry.retail) description += " · Retail: " + entry.retail;
+          if (entry.remark) description += " · " + entry.remark;
+          if (entry.url) description += " · " + entry.url;
+        }
       } else {
         description = "Recorded income";
       }
@@ -222,6 +258,7 @@ async function onDriveReady() {
       return;
     }
     activeFolderId = folder.id;
+    addButton.disabled = false;
     if (folder.name !== "Wallet bills") {
       setWalletMessage("Rename the connected Drive folder to Wallet bills.", true);
     }
@@ -231,6 +268,79 @@ async function onDriveReady() {
     setWalletMessage(error.message || "Google Drive could not be checked.", true);
   }
 }
+
+
+function updateOptionalFields() {
+  const others = addGroup.value === "Others";
+  addRetailField.hidden = !others;
+  addUrlField.hidden = !others;
+  addRemarkField.hidden = !others;
+  if (!others) {
+    addRetail.value = "";
+    addUrl.value = "";
+    addRemark.value = "";
+  }
+}
+
+function closeAddPanel() {
+  addPanel.hidden = true;
+  addStatus.textContent = "";
+  addForm.reset();
+  submitItemButton.disabled = false;
+}
+
+addButton.addEventListener("click", () => {
+  if (!activeFolderId || !getDriveToken()) {
+    setWalletMessage("Sign in again to add an item to private Drive.", true);
+    return;
+  }
+  addForm.reset();
+  addGroup.value = "IN";
+  addMonth.min = currentMonth.slice(0, 4) + "-" + currentMonth.slice(4);
+  addMonth.value = selectedMonth.slice(0, 4) + "-" + selectedMonth.slice(4);
+  updateOptionalFields();
+  addStatus.textContent = "";
+  addPanel.hidden = false;
+  addName.focus();
+});
+
+addGroup.addEventListener("change", updateOptionalFields);
+cancelItemButton.addEventListener("click", closeAddPanel);
+
+addForm.addEventListener("submit", async event => {
+  event.preventDefault();
+  if (!activeFolderId || !getDriveToken()) {
+    addStatus.textContent = "Your Google Drive session has expired. Please sign in again.";
+    return;
+  }
+  if (!addForm.reportValidity()) return;
+  const version = connectionVersion;
+  submitItemButton.disabled = true;
+  addStatus.textContent = "Saving item to private Drive...";
+
+  try {
+    const result = await addWalletItem(getDriveToken(), activeFolderId, {
+      group: addGroup.value,
+      item: addName.value,
+      month: addMonth.value.replace("-", ""),
+      amount: addAmount.value,
+      retail: addRetail.value,
+      url: addUrl.value,
+      remark: addRemark.value
+    });
+    if (version !== connectionVersion) return;
+    selectedMonth = result.month;
+    expandedGroups.set(result.group, true);
+    closeAddPanel();
+    await loadWalletRecords();
+  } catch (error) {
+    if (version === connectionVersion) {
+      addStatus.textContent = error.message || "Could not save the item.";
+    }
+  } finally {
+    if (version === connectionVersion) submitItemButton.disabled = false;
+  }
+});
 
 rememberBrowser.addEventListener("change", () => {
   selectingAccountRequired = false;
@@ -283,6 +393,7 @@ unauthorizedLogoutButton.addEventListener("click", logout);
 
 try {
   await initialiseGoogleLogin({
+    shouldRememberSession: () => rememberBrowser.checked,
     onSignedIn: showSignedIn,
     onUnauthorized: showUnauthorized,
     onError: message => {
@@ -301,11 +412,14 @@ try {
     }
   });
   signInReady = true;
-  showSignedOut(
-    rememberBrowser.checked
-      ? "Welcome back. Continue with Google."
-      : "Sign in with your Google account."
-  );
+  const restored = await restoreLoginSession();
+  if (!restored) {
+    showSignedOut(
+      rememberBrowser.checked
+        ? "Welcome back. Continue with Google."
+        : "Sign in with your Google account."
+    );
+  }
 } catch (error) {
   signInReady = false;
   showSignedOut(error.message);
