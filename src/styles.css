@@ -36,7 +36,7 @@ summary:focus-visible { outline: 3px solid #e29578; outline-offset: 3px; }
 }
 .remember-label input { width: 1.12rem; height: 1.12rem; accent-color: #006d77; }
 #unauthorized-view strong { color: #a42624; }
-.account-actions { margin: 0.8rem 0 1.5rem; }
+
 
 #wallet-view { border-top: 1px solid #cce9e6; padding-top: 1.15rem; margin-top: 1.1rem; }
 .wallet-heading-row {
@@ -44,19 +44,37 @@ summary:focus-visible { outline: 3px solid #e29578; outline-offset: 3px; }
   flex-wrap: wrap; gap: 0.5rem;
 }
 .wallet-heading-row h2 { margin: 0; }
+.wallet-actions { display: flex; align-items: center; gap: 0.55rem; flex-wrap: wrap; }
+.visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+.wallet-message-error {
+  color: #9a3a32;
+  font-weight: 600;
+  padding: 0.55rem 0;
+}
+
 .month-nav {
   display: flex; align-items: center; justify-content: center;
   flex-wrap: wrap; gap: 0.7rem; margin: 1.2rem 0;
 }
 #month-label { min-width: 10rem; text-align: center; font-size: 1.06rem; }
-.wallet-note { color: #446f73; font-size: 0.88rem; margin-bottom: 1rem; }
+
 #wallet-state { color: #234f55; }
 .wallet-table-wrap {
   max-width: 100%; overflow-x: auto;
   border: 1px solid #cce9e6; border-radius: 14px;
 }
 .wallet-table { width: 100%; border-collapse: collapse; text-align: left; min-width: 32rem; }
-.wallet-table caption { text-align: left; font-size: 0.85rem; padding: 0.7rem 0.9rem; color: #456f72; }
+
 .wallet-table th, .wallet-table td {
   padding: 0.8rem 1rem; border-bottom: 1px solid #e1eeee;
   font-size: 0.92rem; vertical-align: top;
@@ -71,17 +89,10 @@ summary:focus-visible { outline: 3px solid #e29578; outline-offset: 3px; }
   color: #006d77;
 }
 .group-toggle:hover:not(:disabled) { background: #cde8e3; }
-.empty-row td { color: #54777a; font-style: italic; padding-left: 1.5rem; }
+
 .wallet-item { font-weight: 700; }
 .wallet-amount { font-variant-numeric: tabular-nums; white-space: nowrap; }
 .wallet-detail { color: #46696d; }
-#storage-test-tools {
-  margin-top: 1.5rem; padding: 0.9rem 1rem;
-  border: 1px solid #cce9e6; border-radius: 14px;
-  max-width: 30rem;
-}
-#storage-test-tools summary { cursor: pointer; font-weight: 700; }
-#test-storage-button { margin-top: 0.85rem; }
 
 @media (max-width: 540px) {
   main { margin-top: 1.2rem; }
