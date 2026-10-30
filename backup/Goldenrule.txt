@@ -35,6 +35,7 @@ SAVING
 - Carry the last confirmed savings balance into the next month.
 - Balance = last confirmed balance + committed savings additions - confirmed withdrawals.
 - Savings settings allow a private monthly target amount per existing savings item. Default target is zero until chosen.
+- Savings targets have a private start month; no planned allocation is applied to earlier, already cleared months.
 - A known opening savings balance can be stored as a private metadata value, separate from both saved deposits and planned monthly allocations.
 - An unknown savings opening balance remains unknown (display an em dash), never silently invent zero.
 - On each month view, calculate IN minus all Bills, Others and custom expense groups, and minus existing current-month recorded savings additions.
@@ -76,6 +77,7 @@ BILLS
 - Each current or overdue Bills/Others amount may be paid partially or fully through a Pay action. Save a verified append-only payment record in the original private item file.
 - For an overdue bill, a @PAY record references the original charge month and current payment month. Never modify locked old months.
 - Starting with the private setup period, render unsettled older obligations as carried views in later months. Do not create duplicate financial records.
+- Do not presume future obligations will be unpaid: carry only obligations whose original month has already passed when viewing the next period.
 - Each carried obligation retains its original group, item and month identity for payment settlement.
 - A derived carried amount is counted once alongside the new month's charges, even when the same item has a separate new monthly charge.
 - Settlement payments reduce Unpaid in the current and later months, not retroactively in earlier displayed periods.
