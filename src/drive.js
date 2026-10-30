@@ -990,17 +990,24 @@ export async function importWalletSetup(token, folderId, source, onProgress = ()
       if (!savedMeta) {
         lines += metaLine(buildMeta(entry.group, entry.item, incoming));
       } else {
-        // Upgrade missing, older private settings only. Re-importing must
-        // never replace manually chosen note, amount, or priority settings.
-        const savedRaw = existing.split("\n")
-          .filter(line => line.startsWith("@META\t")).at(-1) || "";
+        // The selected private CSV can update planning settings without
+        // touching actual bills, payment history or existing hover notes.
         const merged = {...savedMeta};
-        if (entry.group === "Saving" && incoming.adjustableSaving === true &&
-            !savedRaw.includes('"adjustableSaving"')) {
-          merged.adjustableSaving = true;
+        if (entry.group === "Saving" &&
+            typeof incoming.adjustableSaving === "boolean") {
+          merged.adjustableSaving = incoming.adjustableSaving;
         }
-        if (entry.group === "Bills" && Number.isInteger(incoming.holdPriority) &&
-            !savedRaw.includes('"holdPriority"')) {
+        if (entry.group === "Saving" &&
+            (incoming.access === "accessible" || incoming.access === "protected")) {
+          merged.access = incoming.access;
+        }
+        if (entry.group === "Saving" && Number.isFinite(incoming.monthlySaving) &&
+            savedMeta.monthlySaving === 0) {
+          merged.monthlySaving = incoming.monthlySaving;
+          merged.savingFromMonth = incoming.savingFromMonth ||
+            savedMeta.savingFromMonth || input.month;
+        }
+        if (entry.group === "Bills" && Number.isInteger(incoming.holdPriority)) {
           merged.holdPriority = incoming.holdPriority;
         }
         if (entry.group === "Saving" && incoming.openingBalance !== undefined &&
