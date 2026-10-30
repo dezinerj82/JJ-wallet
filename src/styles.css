@@ -933,3 +933,22 @@ select:focus-visible {
   pointer-events: none;
   box-shadow: 0 10px 26px rgba(32, 49, 75, .19);
 }
+
+.wallet-dialog {
+  width: min(22rem, calc(100vw - 2rem));
+  max-width: none;
+  margin: auto;
+  padding: 1.6rem 1.3rem 1.3rem;
+  border: 1px solid #c7d1df;
+  border-radius: 22px;
+  background: var(--alice-blue);
+  color: #253068;
+  box-shadow: 0 18px 55px rgba(32, 49, 75, .24);
+  text-align: center;
+}
+.wallet-dialog::backdrop { background: rgba(36, 40, 60, .22); }
+.wallet-dialog p { margin: 0 0 1.3rem; font-size: 1.2rem; font-weight: 600; }
+.wallet-dialog-actions { display: flex; justify-content: center; gap: .7rem; }
+.wallet-dialog-actions button { min-height: 2.35rem; padding: .53rem 1.25rem; font-size: .9rem; }
+#wallet-dialog-cancel { --btn-bg: var(--pearl-aqua); --btn-hover: #a7d9d2; --btn-text: #004b51; }
+#wallet-dialog-ok { --btn-bg: var(--sunshine-gold); --btn-hover: #ffd782; --btn-text: #493815; }
