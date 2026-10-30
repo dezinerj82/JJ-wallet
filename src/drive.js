@@ -260,7 +260,13 @@ function validateEntry(entry) {
 
   const fields = [group, item, month, amount.toFixed(2)];
   if (group !== "IN") fields.push("0.00", amount.toFixed(2));
-  if (group === "Others") fields.push(optional.retail, optional.url, optional.remark);
+  if (group === "Others") {
+    fields.push(optional.retail, optional.url, optional.remark);
+  } else if (optional.remark) {
+    // Keep legacy 4-field IN and 6-field Bills entries unchanged when no
+    // remark was supplied; append optional remarks only when actually present.
+    fields.push(optional.remark);
+  }
   return { group, item, month, line: fields.join("\t") + "\n" };
 }
 
@@ -459,7 +465,9 @@ function matchesDisplayedSnapshot(fields, previous) {
       (fields[7] || "") === (previous.url || "") &&
       (fields[8] || "") === (previous.remark || "");
   }
-  return true;
+  // Verify the last saved remark too, so stale changes cannot silently win.
+  const remarkIndex = previous.group === "IN" ? 4 : 6;
+  return (fields[remarkIndex] || "") === (previous.remark || "");
 }
 
 export async function updateWalletItem(token, folderId, changes) {
