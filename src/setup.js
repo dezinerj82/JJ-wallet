@@ -164,7 +164,7 @@ export function plannedAlerts(rules, now = new Date()) {
 }
 
 export function validateSetupPayload(data) {
-  if (!data || data.version !== 1 || data.month !== "202611" ||
+  if (!data || data.version !== 1 || !MONTH.test(data.month) ||
       !Array.isArray(data.items) || data.items.length < 1 || data.items.length > 100) {
     throw new Error("Invalid setup file.");
   }
@@ -182,7 +182,8 @@ export function validateSetupPayload(data) {
     }
     if (entry.record !== undefined) {
       if (!entry.record || entry.group === "Saving" ||
-          entry.record.month !== "202611" || !goodMoney(entry.record.amount)) {
+          !MONTH.test(entry.record.month) ||
+          entry.record.month < data.month || !goodMoney(entry.record.amount)) {
         throw new Error("Invalid November entry.");
       }
     }
