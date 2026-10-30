@@ -24,9 +24,9 @@ function parseLine(line) {
     return null;
   }
 
-  if (group === "IN" && fields.length === 4) {
+  if (group === "IN" && fields.length >= 4) {
     const amount = safeAmount(fields[3]);
-    return amount === null ? null : { group, item, month, amount };
+    return amount === null ? null : { group, item, month, amount, remark: fields[4] || "" };
   }
 
   if (group === "Saving" && fields.length >= 6) {
@@ -34,7 +34,7 @@ function parseLine(line) {
     const withdrawn = safeAmount(fields[4]);
     const balance = safeAmount(fields[5]);
     return [added, withdrawn, balance].some(v => v === null)
-      ? null : { group, item, month, added, withdrawn, balance };
+      ? null : { group, item, month, added, withdrawn, balance, remark: fields[6] || "" };
   }
 
   if ((group === "Bills" || group === "Others") && fields.length >= 6) {
@@ -45,7 +45,7 @@ function parseLine(line) {
     return group === "Others"
       ? { group, item, month, amount, paid, unpaid,
           retail: fields[6] || "", url: fields[7] || "", remark: fields[8] || "" }
-      : { group, item, month, amount, paid, unpaid };
+      : { group, item, month, amount, paid, unpaid, remark: fields[6] || "" };
   }
 
   return null;
