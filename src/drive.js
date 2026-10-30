@@ -312,13 +312,9 @@ function fileHasItem(content, group, item) {
 }
 
 function monthIsPresent(content, group, item, month) {
-  const itemKey = item.toLocaleLowerCase("en");
-  return content.split("\n").some(line => {
-    const fields = line.replace(/\r$/, "").split("\t");
-    return fields[0] === group &&
-      String(fields[1] || "").toLocaleLowerCase("en") === itemKey &&
-      fields[2] === month;
-  });
+  // A deleted month may be added again; earlier snapshots remain in history.
+  const last = lastMonthSnapshot(content, group, item, month);
+  return !!last && !(last.length === 4 && last[3] === "DELETE");
 }
 
 async function createWalletTextFile(token, folderId, filename, line) {
@@ -539,4 +535,84 @@ export async function updateWalletItem(token, folderId, changes) {
     throw new Error("Your update might not have saved correctly. Check Google Drive before retrying.");
   }
   return { group: item.group, item: item.item, month: item.month };
+}
+
+
+// Delete only the selected open month. Do not remove the file or any historical
+// snapshots: append one unambiguous tombstone record instead.
+// Already-paid obligations cannot be erased by a Delete action.
+export async function deleteWalletItem(token, folderId, previous) {
+  if (!token || !folderId) {
+    throw new Error("Your session has expired. Please sign in again.");
+  }
+  const group = previous?.group;
+  const item = previous?.item;
+  const month = previous?.month;
+  if (!["IN", "Bills", "Others"].includes(group) ||
+      typeof item !== "string" || !item || item.length > 180 ||
+      /[\t\r\n\x00-\x1f]/.test(item) ||
+      !/^(?:19|20|21)\d{2}(?:0[1-9]|1[0-2])$/.test(month)) {
+    throw new Error("This item cannot be deleted here.");
+  }
+  const now = new Date();
+  const current = String(now.getFullYear()) + String(now.getMonth() + 1).padStart(2, "0");
+  if (month < current) {
+    throw new Error("Past months are locked. Nothing was deleted.");
+  }
+  if (group !== "IN" &&
+      (!Number.isFinite(previous.paid) || !Number.isFinite(previous.unpaid))) {
+    throw new Error("Could not verify the payment status. Refresh before deleting.");
+  }
+  if (group !== "IN" && previous.paid > 0) {
+    throw new Error("This item has a payment recorded. It cannot be deleted.");
+  }
+
+  const filename = await itemFileName(group, item);
+  const files = await listWalletFileMetadata(token, folderId);
+  const matches = [];
+  for (const file of files) {
+    if (Number(file.size || 0) > WRITE_LIMIT) {
+      throw new Error("Saved history is too large to delete this item safely.");
+    }
+    const content = await getFileText(token, file.id);
+    if (new Blob([content]).size > WRITE_LIMIT) {
+      throw new Error("Saved history is too large to delete this item safely.");
+    }
+    if (file.name === filename || fileHasItem(content, group, item)) {
+      matches.push({ file, content });
+    }
+  }
+
+  if (matches.length !== 1) {
+    throw new Error("Couldn't find this item. Please refresh and try again.");
+  }
+  const existing = matches[0];
+  if (existing.file.appProperties?.purpose !== ITEM_MARKER ||
+      !fileHasItem(existing.content, group, item)) {
+    throw new Error("This record can't be deleted here. Nothing was changed.");
+  }
+  const last = lastMonthSnapshot(existing.content, group, item, month);
+  if (!matchesDisplayedSnapshot(last, previous)) {
+    throw new Error("This item has changed. Refresh before trying again.");
+  }
+  // A defensive second check: trust the last saved payment, not only the UI.
+  if (group !== "IN" && (!Number.isFinite(Number(last[4])) ||
+      Number(last[4]) > 0 || Number(last[4]) < 0)) {
+    throw new Error("This item has a payment recorded and cannot be deleted.");
+  }
+
+  const marker = [group, item, month, "DELETE"].join("\t") + "\n";
+  const expected = existing.content +
+    (existing.content && !existing.content.endsWith("\n") ? "\n" : "") +
+    marker;
+  if (new Blob([expected]).size > WRITE_LIMIT) {
+    throw new Error("The item history is full. Nothing was deleted.");
+  }
+
+  await replaceWalletText(token, existing.file.id, expected);
+  const confirmed = await getFileText(token, existing.file.id);
+  if (confirmed !== expected) {
+    throw new Error("Couldn't verify this deletion. Check Drive before retrying.");
+  }
+  return { group, item, month };
 }
