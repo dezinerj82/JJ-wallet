@@ -865,3 +865,43 @@ select:focus-visible {
   .wallet-balance-row { margin-top: 1.7rem; }
   .wallet-balance-pill { padding: .7rem 1.1rem; }
 }
+
+.add-grid textarea, .setting-note textarea {
+  width: 100%;
+  min-height: 5.5rem;
+  padding: .65rem .75rem;
+  border: 1px solid var(--pearl-aqua);
+  border-radius: 11px;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-size: .96rem;
+  resize: vertical;
+}
+.add-grid .full-field { grid-column: 1 / -1; }
+.item-options {
+  margin: .85rem 0;
+  padding: .55rem .8rem;
+  border-radius: 13px;
+  background: var(--alice-blue);
+}
+.item-options > summary { cursor: pointer; font-weight: 600; padding: .2rem; }
+.item-options > .add-grid { padding: .75rem .2rem .4rem; }
+.setting-note { display: flex; flex-direction: column; gap: .45rem; margin: 1rem 0; }
+.setting-check { display: flex; align-items: center; gap: .6rem; margin: 1rem 0; }
+.setting-check input { accent-color: var(--stormy-teal); width: 1.15rem; height: 1.15rem; }
+#saving-settings-name { font-weight: 600; }
+#saving-settings-cancel {
+  --btn-bg: var(--pearl-aqua);
+  --btn-hover: #a7d9d2;
+  --btn-text: #004b51;
+}
+#saving-settings-save {
+  --btn-bg: var(--sunshine-gold);
+  --btn-hover: #ffd782;
+  --btn-text: #493815;
+}
+#saving-settings-panel .form-actions-right button {
+  min-height: 2.35rem; padding: .53rem 1.05rem; font-size: .9rem;
+}
+@media (max-width: 600px) { .add-grid .full-field { grid-column: auto; } }
