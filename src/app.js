@@ -608,6 +608,7 @@ function renderTable(month, target, groupStates, fromComparison = false) {
 
 function renderBalance() {
   walletBalanceWarning.hidden = true;
+  walletUnpaidOutput.hidden = true;
   walletBalanceOutput.classList.remove("balance-negative");
   if (!walletBalanceReady || !activeFolderId || walletView.hidden) {
     walletBalanceRow.hidden = true;
@@ -624,9 +625,10 @@ function renderBalance() {
     const plan = calculateMonthlyPlan(walletEntries, currentMonth);
     walletBalanceWarning.hidden = !plan.insufficientForBills;
     walletBalanceOutput.classList.toggle("balance-negative", plan.balance < 0);
+    const unpaid = calculateUnpaidForMonth(walletEntries,currentMonth);
+    walletUnpaidOutput.hidden = unpaid <= 0;
     walletUnpaidAmount.textContent = formatWalletCurrency(
-      calculateUnpaidForMonth(walletEntries,currentMonth),
-      displayCurrencies.main,referenceRate
+      unpaid,displayCurrencies.main,referenceRate
     );
     walletBalanceAmount.textContent = formatWalletCurrency(
       plan.balance, displayCurrencies.main, referenceRate
