@@ -13,13 +13,23 @@
     <section aria-labelledby="login-heading">
       <h2 id="login-heading">Login to start</h2>
       <p id="setup-status" role="status" aria-live="polite">Preparing Google sign-in...</p>
-      <button type="button" id="login-button" disabled>Sign in with Google</button>
+      <div id="sign-in-actions">
+        <button type="button" id="login-button" disabled>Sign in with Google</button>
+        <label class="remember-label" for="remember-browser">
+          <input type="checkbox" id="remember-browser">
+          Remember this browser for faster sign-in
+        </label>
+      </div>
+      <div id="unauthorized-view" hidden>
+        <p id="unauthorized-account"></p>
+        <p><strong>You are not authorized</strong></p>
+        <button type="button" id="unauthorized-logout-button">Sign out</button>
+      </div>
       <div id="signed-in-view" hidden>
         <p id="signed-in-account"></p>
         <p>Wallet records are not enabled yet. First, verify your private Drive folder.</p>
         <p id="drive-status" role="status" aria-live="polite">Google Drive is not connected.</p>
         <button type="button" id="connect-drive-button">Connect Google Drive</button>
-        <button type="button" id="create-folder-button" hidden>Create Bills folder</button>
         <button type="button" id="test-storage-button" hidden>Test TXT save and read</button>
         <div class="action-row">
           <button type="button" id="logout-button">Sign out</button>
