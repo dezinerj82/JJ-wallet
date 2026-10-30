@@ -18,7 +18,7 @@ let attemptedFastLogin = false;
 let signInReady = false;
 let editingEntry = null;
 let walletProgressTicket = 0;
-let displayCurrency = "MYR";
+const displayCurrencies = { main: "MYR", other: "MYR" };
 let referenceRate = null;
 let currencyLoading = false;
 let currencyError = "";
@@ -56,20 +56,20 @@ const otherMonthsLabel = document.getElementById("other-months-label");
 const otherMonthsBody = document.getElementById("other-months-table-body");
 const mainCurrencySelect = document.getElementById("main-currency-select");
 const otherCurrencySelect = document.getElementById("other-currency-select");
-const exchangeNotes = [
-  {
+const exchangeNotes = {
+  main: {
     container: document.getElementById("main-exchange-info"),
     text: document.getElementById("main-exchange-text"),
     credit: document.getElementById("main-exchange-credit"),
     progress: document.getElementById("main-exchange-progress")
   },
-  {
+  other: {
     container: document.getElementById("other-exchange-info"),
     text: document.getElementById("other-exchange-text"),
     credit: document.getElementById("other-exchange-credit"),
     progress: document.getElementById("other-exchange-progress")
   }
-];
+};
 const refreshButton = document.getElementById("refresh-wallet-button");
 const addButton = document.getElementById("add-item-button");
 const addPanel = document.getElementById("add-item-panel");
@@ -140,40 +140,48 @@ function setItemProgress(message = "") {
   }
 }
 
+// The two tables choose display currency independently; one verified rate
+// can serve either view without ever modifying the underlying MYR amounts.
+function anyWonView() {
+  return displayCurrencies.main === "KRW" || displayCurrencies.other === "KRW";
+}
+
 function updateExchangeNotes() {
-  const converted = displayCurrency === "KRW";
-  for (const note of exchangeNotes) {
+  for (const [view, note] of Object.entries(exchangeNotes)) {
+    const converted = displayCurrencies[view] === "KRW";
     note.container.hidden = !converted;
-    if (!converted) continue;
-    note.progress.hidden = !currencyLoading;
-    note.credit.hidden = currencyLoading || !!currencyError || !referenceRate;
-    note.text.textContent = currencyLoading
-      ? "Getting the latest exchange rate..."
-      : currencyError
-        ? currencyError
-        : referenceRate
-          ? "Approximate conversion · Rate updated " + rateDateLabel(referenceRate) +
-            " · Rounded up to the next ₩100."
-          : "Checking the exchange rate...";
+    note.progress.hidden = !converted || !currencyLoading;
+    note.credit.hidden = !converted || currencyLoading || !!currencyError || !referenceRate;
+    note.text.textContent = !converted
+      ? ""
+      : currencyLoading
+        ? "Getting the latest exchange rate..."
+        : currencyError
+          ? currencyError
+          : referenceRate
+            ? "Approximate conversion · Rate updated " + rateDateLabel(referenceRate) +
+              " · Rounded up to the next ₩100."
+            : "Checking the exchange rate...";
   }
 }
 
 async function refreshCurrencyRate() {
-  if (displayCurrency !== "KRW") return;
+  if (!anyWonView()) return;
+  // A shared request updates whichever table currently displays won.
   const requestId = ++currencyRequestId;
   currencyLoading = true;
   currencyError = "";
   updateExchangeNotes();
   try {
     const latestRate = await getMyrKrwRate();
-    if (requestId !== currencyRequestId || displayCurrency !== "KRW") return;
+    if (requestId !== currencyRequestId || !anyWonView()) return;
     referenceRate = latestRate;
   } catch {
-    if (requestId !== currencyRequestId || displayCurrency !== "KRW") return;
+    if (requestId !== currencyRequestId || !anyWonView()) return;
     referenceRate = null;
     currencyError = "Couldn't get the exchange rate. Press Refresh to retry, or choose RM.";
   } finally {
-    if (requestId === currencyRequestId && displayCurrency === "KRW") {
+    if (requestId === currencyRequestId) {
       currencyLoading = false;
       updateExchangeNotes();
       renderMonth();
@@ -182,28 +190,37 @@ async function refreshCurrencyRate() {
   }
 }
 
-function selectCurrency(value) {
-  if (value !== "MYR" && value !== "KRW") return;
-  ++currencyRequestId;
-  displayCurrency = value;
-  mainCurrencySelect.value = value;
-  otherCurrencySelect.value = value;
-  currencyLoading = false;
-  currencyError = "";
-  if (value === "KRW") referenceRate = null;
+function selectCurrency(view, value) {
+  if (!Object.hasOwn(displayCurrencies, view) ||
+      (value !== "MYR" && value !== "KRW")) return;
+  displayCurrencies[view] = value;
+  if (view === "main") mainCurrencySelect.value = value;
+  else otherCurrencySelect.value = value;
+
+  if (!anyWonView()) {
+    // Cancel updates to the display when neither table needs the rate.
+    ++currencyRequestId;
+    currencyLoading = false;
+    currencyError = "";
+  }
   updateExchangeNotes();
-  renderMonth();
-  renderComparisonMonth();
-  if (value === "KRW") void refreshCurrencyRate();
+  if (view === "main") renderMonth();
+  else renderComparisonMonth();
+
+  // No second network fetch while the other view is already loading.
+  if (value === "KRW" && !currencyLoading) void refreshCurrencyRate();
 }
 
-mainCurrencySelect.addEventListener("change", () => selectCurrency(mainCurrencySelect.value));
-otherCurrencySelect.addEventListener("change", () => selectCurrency(otherCurrencySelect.value));
+mainCurrencySelect.addEventListener("change", () =>
+  selectCurrency("main", mainCurrencySelect.value));
+otherCurrencySelect.addEventListener("change", () =>
+  selectCurrency("other", otherCurrencySelect.value));
 
 function resetWallet() {
   connectionVersion++;
   ++currencyRequestId;
-  displayCurrency = "MYR";
+  displayCurrencies.main = "MYR";
+  displayCurrencies.other = "MYR";
   referenceRate = null;
   currencyLoading = false;
   currencyError = "";
@@ -327,7 +344,8 @@ function renderTable(month, target, groupStates, fromComparison = false) {
       addTextCell(row, entry.item, "wallet-item");
       addTextCell(row, formatWalletCurrency(
         entry.group === "Saving" ? entry.balance : entry.amount,
-        displayCurrency, referenceRate
+        fromComparison ? displayCurrencies.other : displayCurrencies.main,
+        referenceRate
       ), "wallet-amount");
       addTextCell(row, entry.remark || "—", "wallet-detail");
 
@@ -761,7 +779,7 @@ window.addEventListener("resize", () => {
 refreshButton.addEventListener("click", () => {
   if (activeFolderId) {
     void loadWalletRecords();
-    if (displayCurrency === "KRW") void refreshCurrencyRate();
+    if (anyWonView()) void refreshCurrencyRate();
   } else {
     setWalletMessage("Storage is not connected. Sign out and sign in again.", true);
   }
