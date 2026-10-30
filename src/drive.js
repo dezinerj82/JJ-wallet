@@ -2,6 +2,8 @@ import {
   latestRecurringRule, recurringDirectiveLine,
   recurringMonthsDue, recurringBillLine
 } from "./recurring.js";
+import { isWalletGroup } from "./groups.js";
+import { buildMeta, metaLine, lastMeta } from "./private-meta.js";
 
 // Private Drive storage. Uses only the user's temporary drive.file OAuth token.
 // Recognize the original app-created Wallet bills folder by its marker after moves within Drive.
@@ -221,8 +223,8 @@ const WRITE_LIMIT = 5 * 1024 * 1024;
 
 function validateEntry(entry) {
   const group = String(entry?.group || "");
-  if (!["IN", "Bills", "Others"].includes(group)) {
-    throw new Error("This group is not available for new items yet.");
+  if (!isWalletGroup(group) || group === "Saving") {
+    throw new Error("This category isn't available for new items.");
   }
   const item = String(entry?.item || "").trim();
   if (!item || item.length > 120 || /[\t\r\n\x00-\x1f]/.test(item)) {
@@ -378,6 +380,7 @@ export async function addWalletItem(token, folderId, entry) {
   }
   const item = validateEntry(entry);
   const recurring = entry?.recurring === true;
+  const metadataLine = entry?.meta ? metaLine(buildMeta(item.group, item.item, entry.meta)) : "";
   if (recurring && item.group !== "Bills") {
     throw new Error("Only Bills can repeat.");
   }
@@ -402,7 +405,7 @@ export async function addWalletItem(token, folderId, entry) {
   }
 
   function addedLines(base) {
-    let newLines = item.line;
+    let newLines = item.line + metadataLine;
     if (recurring) {
       const rule = {
         item: item.item, month: item.month, amount: Number(entry.amount),
@@ -548,6 +551,11 @@ export async function updateWalletItem(token, folderId, changes) {
     revised[5] = (Math.round((newAmount - previouslyPaid) * 100) / 100).toFixed(2);
   }
 
+  const priorMeta = lastMeta(existing.content, item.group, item.item);
+  const expectedPriorMeta = prior.meta || null;
+  if (JSON.stringify(priorMeta) !== JSON.stringify(expectedPriorMeta)) {
+    throw new Error("Item details changed. Refresh and try again.");
+  }
   const savedRule = item.group === "Bills"
     ? latestRecurringRule(existing.content, item.item) : null;
   const currentlyRecurring = savedRule?.active === true;
@@ -560,11 +568,15 @@ export async function updateWalletItem(token, folderId, changes) {
     throw new Error("Only Bills can repeat.");
   }
   const switchRule = item.group === "Bills" && wantsRecurring !== currentlyRecurring;
+  const newMeta = changes?.meta
+    ? buildMeta(item.group, item.item, changes.meta) : null;
+  const metaChanged = JSON.stringify(priorMeta) !== JSON.stringify(newMeta);
   const itemChanged = last.join("\t") !== revised.join("\t");
-  if (!itemChanged && !switchRule) {
+  if (!itemChanged && !switchRule && !metaChanged) {
     throw new Error("No changes to save.");
   }
   let appended = itemChanged ? revised.join("\t") + "\n" : "";
+  if (metaChanged && newMeta) appended += metaLine(newMeta);
   if (switchRule) {
     const rule = {
       item: item.item, month: item.month,
@@ -607,7 +619,7 @@ export async function deleteWalletItem(token, folderId, previous) {
   const group = previous?.group;
   const item = previous?.item;
   const month = previous?.month;
-  if (!["IN", "Bills", "Others"].includes(group) ||
+  if (!isWalletGroup(group) || group === "Saving" ||
       typeof item !== "string" || !item || item.length > 180 ||
       /[\t\r\n\x00-\x1f]/.test(item) ||
       !/^(?:19|20|21)\d{2}(?:0[1-9]|1[0-2])$/.test(month)) {
