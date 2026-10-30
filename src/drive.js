@@ -569,7 +569,8 @@ export async function updateWalletItem(token, folderId, changes) {
   }
   const switchRule = item.group === "Bills" && wantsRecurring !== currentlyRecurring;
   const newMeta = changes?.meta
-    ? buildMeta(item.group, item.item, changes.meta) : null;
+    ? buildMeta(item.group, item.item, changes.meta)
+    : priorMeta ? buildMeta(item.group, item.item) : null;
   const metaChanged = JSON.stringify(priorMeta) !== JSON.stringify(newMeta);
   const itemChanged = last.join("\t") !== revised.join("\t");
   if (!itemChanged && !switchRule && !metaChanged) {
