@@ -138,9 +138,11 @@ export function parseWalletFiles(files) {
     if (found.group !== "Saving" || active.some(entry =>
       entry.group === "Saving" && entry.item.toLocaleLowerCase("en") ===
         found.item.toLocaleLowerCase("en"))) continue;
+    const details = metadata.get(metaKey(found.group, found.item));
     active.push({
       group:"Saving", item: found.item, month:"190001",
-      added:0, withdrawn:0, balance:null, remark:"", catalogOnly:true
+      added:0, withdrawn:0, balance:details?.openingBalance ?? null,
+      remark:"", catalogOnly:true
     });
   }
   return {
