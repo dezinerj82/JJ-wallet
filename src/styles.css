@@ -316,21 +316,69 @@ select:focus-visible {
   overflow-wrap: anywhere;
 }
 
-/* Accessible update pencil button with a muted same-tone hover. */
+/* Pencil button fits within the line of item text, with a larger invisible hit area. */
 .update-item-button {
-  --btn-bg: var(--alice-blue);
-  --btn-hover: #d9edf3;
+  --btn-bg: transparent;
+  --btn-hover: var(--alice-blue);
   --btn-text: #005c66;
-  width: 2.55rem;
-  height: 2.55rem;
-  min-height: 2.55rem;
+  position: relative;
+  width: 1.75rem;
+  height: 1.5rem;
+  min-height: 1.5rem;
   padding: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 3px 8px rgba(0, 71, 78, .08);
+  border-radius: .5rem;
+  box-shadow: none;
+}
+.update-item-button::after {
+  content: "";
+  position: absolute;
+  inset: -.48rem;
+}
+.update-item-button:hover:not(:disabled),
+.update-item-button:active:not(:disabled) {
+  box-shadow: none;
 }
 .update-item-button:disabled { opacity: .35; }
+
+/* Indeterminate activity: no invented percentage or fake completion timing. */
+.operation-progress {
+  width: min(100%, 35rem);
+  margin: .7rem 0 1.1rem;
+}
+.operation-progress-text {
+  margin: 0 0 .5rem;
+  font-size: .95rem;
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--stormy-teal);
+}
+.progress-track {
+  position: relative;
+  height: .38rem;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--alice-blue);
+}
+.progress-motion {
+  display: block;
+  position: absolute;
+  inset-block: 0;
+  left: -38%;
+  width: 38%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--pearl-aqua), var(--stormy-teal));
+  animation: wallet-progress-slide 1.45s ease-in-out infinite;
+}
+@keyframes wallet-progress-slide {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(370%); }
+}
+.item-progress { margin: .75rem 0 1rem; }
+
 
 /* Form preserves the existing add/update functionality. */
 .add-item-panel {
@@ -419,4 +467,10 @@ select:focus-visible {
   }
   button:hover:not(:disabled),
   button:active:not(:disabled) { transform: none; }
+  .progress-motion {
+    animation: none;
+    left: 0;
+    width: 100%;
+    opacity: .7;
+  }
 }
