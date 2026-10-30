@@ -1,6 +1,6 @@
 // Pure read-only wallet record parsing. No financial records are stored in GitHub.
 // Item TXT lines are tab-separated. Last valid entry for an item/month wins.
-// Forecast/carry-forward logic is intentionally NOT applied in this first read-only view.
+// Planning balance uses current saved items only; automatic carry-forward is not enabled yet.
 
 export const WALLET_GROUPS = Object.freeze(["IN", "Saving", "Bills", "Others"]);
 const MONTH_RE = /^(?:19|20|21)\d{2}(?:0[1-9]|1[0-2])$/;
@@ -110,6 +110,39 @@ export function entriesForMonth(allEntries, month) {
     groups[group].sort((a, b) => a.item.localeCompare(b.item));
   }
   return groups;
+}
+
+// Monthly planning estimate, not an actual bank balance.
+// A = this month's IN; B = this month's Bills + Others + this month's
+// recorded savings additions. Carry-forward amounts will be included when
+// that separate workflow is implemented; never assume unrecorded carry.
+export function calculateMonthlyBalance(allEntries, month) {
+  const groups = entriesForMonth(allEntries, month);
+  const sumCents = (items, field) => items.reduce((sum, item) => {
+    const amount = item[field];
+    if (!Number.isFinite(amount) || amount < 0) {
+      throw new Error("Could not calculate the monthly balance.");
+    }
+    const cents = Math.round(amount * 100);
+    if (!Number.isSafeInteger(cents) || !Number.isSafeInteger(sum + cents)) {
+      throw new Error("The monthly amount is too large to calculate safely.");
+    }
+    return sum + cents;
+  }, 0);
+
+  const income = sumCents(groups.IN, "amount");
+  const bills = sumCents(groups.Bills, "amount");
+  const others = sumCents(groups.Others, "amount");
+  // entriesForMonth carries the last savings balance forward for display.
+  // Never count that balance or historical additions as this month's cost.
+  const currentSavings = groups.Saving.filter(entry => entry.month === month);
+  const saving = sumCents(currentSavings, "added");
+  const totalExpenses = bills + others + saving;
+  if (!Number.isSafeInteger(totalExpenses) ||
+      !Number.isSafeInteger(income - totalExpenses)) {
+    throw new Error("The monthly balance could not be calculated safely.");
+  }
+  return (income - totalExpenses) / 100;
 }
 
 export function monthKey(date) {
