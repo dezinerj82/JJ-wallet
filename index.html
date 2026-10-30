@@ -38,17 +38,16 @@
       <div class="wallet-heading-row">
         <h2 id="wallet-heading">Monthly wallet</h2>
         <div class="wallet-actions">
+          <button type="button" id="other-months-button" aria-haspopup="dialog" aria-controls="other-months-window" aria-expanded="false">Other months</button>
           <button type="button" id="refresh-wallet-button">Refresh</button>
           <button type="button" id="add-item-button">Add</button>
           <button type="button" id="logout-button">Sign out</button>
         </div>
       </div>
 
-      <nav class="month-nav" aria-label="Payment month">
-        <button type="button" id="month-prev-button">Previous month</button>
+      <div class="month-nav" aria-label="Current payment month">
         <strong id="month-label" aria-live="polite"></strong>
-        <button type="button" id="month-next-button">Next month</button>
-      </nav>
+      </div>
 
       <div id="wallet-progress" class="operation-progress" hidden>
         <p id="wallet-progress-text" class="operation-progress-text" aria-live="polite"></p>
@@ -115,5 +114,35 @@
       </div>
     </section>
   </main>
+
+  <section id="other-months-window" class="other-months-window" role="dialog" aria-modal="false" aria-labelledby="other-months-title" hidden>
+    <div id="other-months-drag-handle" class="other-months-header">
+      <div class="other-months-heading">
+        <h2 id="other-months-title">Other months</h2>
+        <span class="drag-hint">Drag to move</span>
+      </div>
+      <button type="button" id="other-months-close" class="other-months-close" aria-label="Close other months">×</button>
+    </div>
+    <div class="other-months-scroll">
+      <nav class="other-months-nav" aria-label="Browse other months">
+        <button type="button" id="other-months-prev" aria-label="Previous month">Previous</button>
+        <strong id="other-months-label" aria-live="polite"></strong>
+        <button type="button" id="other-months-next" aria-label="Next month">Next</button>
+      </nav>
+      <div class="wallet-table-wrap other-months-table-wrap">
+        <table class="wallet-table other-months-table">
+          <thead>
+            <tr>
+              <th scope="col">Item</th>
+              <th scope="col">Amount (RM)</th>
+              <th scope="col">Details</th>
+              <th scope="col">Update</th>
+            </tr>
+          </thead>
+          <tbody id="other-months-table-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
 </body>
 </html>
