@@ -371,6 +371,7 @@ function confirmWallet(message = "Are you sure?") {
     walletDialogOk.addEventListener("click", ok);
     walletDialogCancel.addEventListener("click", cancel);
     walletDialog.addEventListener("close", finish);
+    walletDialog.returnValue = "cancel";
     walletDialog.showModal();
     walletDialogOk.focus();
   });
