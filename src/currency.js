@@ -95,7 +95,7 @@ export function formatWalletCurrency(amount, currency, referenceRate) {
     const converted = amount * referenceRate.rate;
     if (!Number.isFinite(converted) || converted < 0) return "—";
     // KRW display is always rounded UP to the next 100 won.
-    const rounded = Math.ceil(converted / 100 - 1e-10) * 100;
+    const rounded = Math.max(0, Math.ceil(converted / 100 - 1e-10) * 100);
     return Number.isSafeInteger(rounded) ? "₩" + krwFormatter.format(rounded) : "—";
   }
   return "—";
