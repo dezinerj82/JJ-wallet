@@ -1,11 +1,13 @@
 import { initialiseGoogleLogin, restoreLoginSession, signIn, signOut, getDriveToken } from "./auth.js";
-import { findBillsFolder, readWalletTextFiles, addWalletItem, updateWalletItem, deleteWalletItem, renewRecurringBills, renewScheduledItems, importWalletSetup, saveSavingSettings, withdrawSavingItem } from "./drive.js";
+import { findBillsFolder, readWalletTextFiles, addWalletItem, updateWalletItem, deleteWalletItem, renewRecurringBills, renewScheduledItems, importWalletSetup, saveSavingSettings, withdrawSavingItem, recordBillPayment } from "./drive.js";
 import { getMyrKrwRate, formatWalletCurrency, rateDateLabel } from "./currency.js";
 import { displayGroup, availableGroups, isCustomGroup, NEW_CATEGORY, NEW_ITEM } from "./groups.js";
 import { buildMeta, parseAllMetadata, serviceReminders, effectiveServiceMonth, metaKey } from "./private-meta.js";
 import { plannedAlerts, validateSetupPayload } from "./setup.js";
+import { csvTemplate, parseWalletCsv } from "./csv.js";
 import {
   WALLET_GROUPS, parseWalletFiles, entriesForMonth, calculateMonthlyPlan,
+  calculateUnpaidForMonth, suggestedHolds,
   monthKey, shiftedMonthKey, formatMonth, formatAmount
 } from "./records.js";
 
@@ -23,6 +25,7 @@ let attemptedFastLogin = false;
 let signInReady = false;
 let editingEntry = null;
 let editingSavings = null;
+let payingEntry = null;
 let withdrawApproved = false;
 let lastAddGroup = "IN";
 let walletMetadata = new Map();
@@ -58,6 +61,8 @@ const walletTableWrap = document.getElementById("wallet-table-wrap");
 const walletTableBody = document.getElementById("wallet-table-body");
 const walletBalanceRow = document.getElementById("wallet-balance-row");
 const walletBalanceWarning = document.getElementById("wallet-balance-warning");
+const walletUnpaidOutput = document.getElementById("wallet-unpaid");
+const walletUnpaidAmount = document.getElementById("wallet-unpaid-amount");
 const walletBalanceOutput = document.getElementById("wallet-balance");
 const walletBalanceAmount = document.getElementById("wallet-balance-amount");
 const monthLabel = document.getElementById("month-label");
@@ -89,6 +94,7 @@ const exchangeNotes = {
 const refreshButton = document.getElementById("refresh-wallet-button");
 const addButton = document.getElementById("add-item-button");
 const walletSetupButton = document.getElementById("wallet-setup-button");
+const walletDownloadTemplate = document.getElementById("wallet-download-template");
 const walletSetupFile = document.getElementById("wallet-setup-file");
 const addPanel = document.getElementById("add-item-panel");
 const addHeading = document.getElementById("add-item-heading");
@@ -129,6 +135,13 @@ const savingsNote = document.getElementById("saving-hover-note");
 const savingsStatus = document.getElementById("saving-settings-status");
 const savingsCancel = document.getElementById("saving-settings-cancel");
 const savingsSave = document.getElementById("saving-settings-save");
+const payPanel = document.getElementById("pay-item-panel");
+const payForm = document.getElementById("pay-item-form");
+const payName = document.getElementById("pay-item-name");
+const payAmount = document.getElementById("pay-item-amount");
+const payStatus = document.getElementById("pay-item-status");
+const payCancel = document.getElementById("pay-item-cancel");
+const paySave = document.getElementById("pay-item-save");
 const walletDialog = document.getElementById("wallet-dialog");
 const walletDialogText = document.getElementById("wallet-dialog-text");
 const walletDialogCancel = document.getElementById("wallet-dialog-cancel");
