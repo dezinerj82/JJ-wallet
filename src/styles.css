@@ -335,7 +335,8 @@ select:focus-visible {
 .update-item-button::after {
   content: "";
   position: absolute;
-  inset: -.48rem;
+  /* A roughly 44px click area, without increasing visible row height. */
+  inset: -.63rem -.5rem;
 }
 .update-item-button:hover:not(:disabled),
 .update-item-button:active:not(:disabled) {
