@@ -104,13 +104,25 @@
           <thead>
             <tr>
               <th scope="col">Item</th>
-              <th scope="col">Amount (RM)</th>
+              <th scope="col" class="amount-column">
+                <span class="amount-heading">Amount
+                  <select id="main-currency-select" class="currency-select" aria-label="Display monthly wallet amounts in">
+                    <option value="MYR">RM</option>
+                    <option value="KRW">₩</option>
+                  </select>
+                </span>
+              </th>
               <th scope="col">Details</th>
               <th scope="col">Update</th>
             </tr>
           </thead>
           <tbody id="wallet-table-body"></tbody>
         </table>
+      </div>
+      <div id="main-exchange-info" class="exchange-info" hidden>
+        <span id="main-exchange-text" aria-live="polite"></span>
+        <a id="main-exchange-credit" href="https://www.exchangerate-api.com" target="_blank" rel="noopener noreferrer" hidden>Rates by Exchange Rate API</a>
+        <div id="main-exchange-progress" class="progress-track exchange-progress-track" hidden><span class="progress-motion"></span></div>
       </div>
     </section>
   </main>
@@ -134,13 +146,25 @@
           <thead>
             <tr>
               <th scope="col">Item</th>
-              <th scope="col">Amount (RM)</th>
+              <th scope="col" class="amount-column">
+                <span class="amount-heading">Amount
+                  <select id="other-currency-select" class="currency-select" aria-label="Display other months amounts in">
+                    <option value="MYR">RM</option>
+                    <option value="KRW">₩</option>
+                  </select>
+                </span>
+              </th>
               <th scope="col">Details</th>
               <th scope="col">Update</th>
             </tr>
           </thead>
           <tbody id="other-months-table-body"></tbody>
         </table>
+      </div>
+      <div id="other-exchange-info" class="exchange-info" hidden>
+        <span id="other-exchange-text" aria-live="polite"></span>
+        <a id="other-exchange-credit" href="https://www.exchangerate-api.com" target="_blank" rel="noopener noreferrer" hidden>Rates by Exchange Rate API</a>
+        <div id="other-exchange-progress" class="progress-track exchange-progress-track" hidden><span class="progress-motion"></span></div>
       </div>
     </div>
   </section>
