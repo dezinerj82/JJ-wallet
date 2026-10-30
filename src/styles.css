@@ -117,7 +117,7 @@ summary:focus-visible { outline: 3px solid var(--tangerine-dream); outline-offse
   border-radius: 16px;
   box-shadow: var(--soft-shadow);
 }
-.wallet-table { width: 100%; border-collapse: collapse; text-align: left; min-width: 32rem; }
+.wallet-table { width: 100%; border-collapse: collapse; text-align: left; min-width: 38rem; }
 .wallet-table th, .wallet-table td {
   padding: 0.8rem 1rem;
   border-bottom: 1px solid var(--alice-blue);
@@ -210,4 +210,30 @@ summary:focus-visible { outline: 3px solid var(--tangerine-dream); outline-offse
   .add-grid { grid-template-columns: minmax(0, 1fr); }
   .wallet-actions { gap: 0.4rem; }
   .wallet-actions button { padding: 0.65rem 0.8rem; }
+}
+
+/* Per-item Update action: accessible icon-only pencil button. */
+.wallet-table thead th:last-child { width: 6rem; text-align: center; }
+.wallet-update-cell { text-align: center; width: 6rem; }
+.update-item-button {
+  width: 2.7rem;
+  height: 2.7rem;
+  min-height: 2.7rem;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--alice-blue);
+  color: var(--stormy-teal);
+  border-radius: 999px;
+  box-shadow: 0 3px 8px rgba(89, 100, 168, 0.13);
+}
+.update-item-button:hover:not(:disabled) { background: var(--sunshine-gold); }
+.update-item-button:disabled { opacity: 0.35; }
+.add-grid input[readonly],
+.add-grid input:disabled,
+.add-grid select:disabled {
+  background: var(--alice-blue);
+  opacity: 0.8;
+  cursor: not-allowed;
 }
