@@ -41,7 +41,7 @@ h1 {
 }
 .brand-home { color: var(--stormy-teal); }
 .brand-wallet { color: var(--soft-indigo); }
-h2, h3 { font-family: inherit; font-weight: 700; }
+h2, h3 { font-family: inherit; font-weight: 600; }
 h2 { font-size: 1.35rem; }
 h3 { font-size: 1.2rem; }
 p { line-height: 1.5; }
@@ -61,7 +61,7 @@ button {
   color: var(--btn-text);
   font: inherit;
   font-size: 1rem;
-  font-weight: 600;
+  font-weight: 500;
   line-height: 1.2;
   cursor: pointer;
   box-shadow: var(--soft-shadow);
@@ -141,11 +141,11 @@ select:focus-visible {
   margin: 0;
   padding: .65rem 1.3rem;
   border-radius: 999px;
-  background: var(--alice-blue);
-  color: var(--stormy-teal);
+  background: var(--soft-indigo);
+  color: var(--paper);
   font-size: clamp(1.45rem, 3.5vw, 1.8rem);
   line-height: 1.2;
-  font-weight: 700;
+  font-weight: 600;
   box-shadow: 0 3px 8px rgba(0, 71, 78, .08);
 }
 .wallet-actions {
@@ -158,7 +158,7 @@ select:focus-visible {
   font-size: .9rem;
   min-height: 2.35rem;
   padding: .53rem 1.05rem;
-  font-weight: 600;
+  font-weight: 500;
 }
 #refresh-wallet-button {
   --btn-bg: var(--pearl-aqua);
@@ -192,12 +192,12 @@ select:focus-visible {
   --btn-text: #005c66;
   min-height: 2.9rem;
   padding: .68rem 1.2rem;
-  font-weight: 600;
+  font-weight: 500;
 }
 #month-label {
   min-width: 10.7rem;
   text-align: center;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 /* The table itself has no coloured panels or coloured data cells. */
@@ -230,7 +230,7 @@ select:focus-visible {
   background: transparent;
 }
 .wallet-table thead th {
-  font-weight: 700;
+  font-weight: 600;
   border-bottom: 3px solid var(--stormy-teal);
   padding: .9rem 1.05rem;
 }
@@ -259,11 +259,11 @@ select:focus-visible {
   min-height: 2.35rem;
   padding: .48rem 1.25rem;
   font-size: 1.07rem;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: .005em;
-  --btn-bg: var(--pearl-aqua);
-  --btn-hover: #a5d8d1;
-  --btn-text: #004b51;
+  --btn-bg: #d9efec;
+  --btn-hover: #c8e6e1;
+  --btn-text: #005960;
   box-shadow: 0 3px 8px rgba(0, 71, 78, .08);
 }
 .group-toggle::after {
@@ -279,24 +279,24 @@ select:focus-visible {
   transform: translateY(1px) rotate(-45deg);
 }
 .group-in {
-  --btn-bg: var(--pearl-aqua);
-  --btn-hover: #a7d9d2;
-  --btn-text: #004b51;
+  --btn-bg: #d9efec;
+  --btn-hover: #c8e6e1;
+  --btn-text: #005960;
 }
 .group-saving {
-  --btn-bg: var(--sunshine-gold);
-  --btn-hover: #ffdb8b;
-  --btn-text: #493815;
+  --btn-bg: #fff0ca;
+  --btn-hover: #ffe5ad;
+  --btn-text: #665018;
 }
 .group-bills {
-  --btn-bg: var(--almond-silk);
-  --btn-hover: #ffd0c0;
-  --btn-text: #763c2c;
+  --btn-bg: #ffebe4;
+  --btn-hover: #ffdfd4;
+  --btn-text: #783f30;
 }
 .group-others {
-  --btn-bg: var(--soft-indigo);
-  --btn-hover: #707bbb;
-  --btn-text: #ffffff;
+  --btn-bg: #e7e8f7;
+  --btn-hover: #d9dcf1;
+  --btn-text: #404a82;
 }
 .empty-row td {
   padding: .65rem 1.25rem 1rem;
@@ -305,9 +305,9 @@ select:focus-visible {
   font-style: normal;
   font-weight: 400;
 }
-.wallet-item { font-weight: 500; }
+.wallet-item { font-weight: 400; }
 .wallet-amount {
-  font-weight: 500;
+  font-weight: 400;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
