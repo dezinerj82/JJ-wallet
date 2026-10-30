@@ -631,3 +631,13 @@ select:focus-visible {
   .other-months-nav button { padding: .45rem .62rem; }
   .other-months-table { min-width: 25rem; }
 }
+
+
+/* On larger displays, both months can be seen side by side. */
+@media (min-width: 1380px) {
+  body.other-months-open main {
+    max-width: calc(50vw - 1.7rem);
+    margin-left: 1.25rem;
+    margin-right: auto;
+  }
+}
