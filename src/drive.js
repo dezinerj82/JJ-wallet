@@ -439,6 +439,9 @@ export async function addWalletItem(token, folderId, entry) {
     if (monthIsPresent(existing.content, item.group, item.item, item.month)) {
       throw new Error("This item is already listed for that month. Use Update to change it.");
     }
+    if (recurring && lastSchedule(existing.content, item.group, item.item)?.active) {
+      throw new Error("This item already has a schedule.");
+    }
     expected = existing.content +
       (existing.content && !existing.content.endsWith("\n") ? "\n" : "") +
       addedLines(existing.content);
@@ -571,6 +574,10 @@ export async function updateWalletItem(token, folderId, changes) {
     throw new Error("Recurring setting changed. Refresh and try again.");
   }
   const wantsRecurring = item.group === "Bills" && changes.recurring === true;
+  if (wantsRecurring &&
+      lastSchedule(existing.content, item.group, item.item)?.active) {
+    throw new Error("This item already has a schedule.");
+  }
   if (changes.recurring === true && item.group !== "Bills") {
     throw new Error("Only Bills can repeat.");
   }
