@@ -57,7 +57,9 @@ WALLET ACCESS PROCESS
 - When a different account signs in, display the verified account email, a clear "You are not authorized" message and a Sign out button; do not load wallet data.
 - A returning browser may be remembered for convenient faster sign-in, but this is an opt-in preference only, not proof of identity.
 - Every new session still requires successful identity verification; never use computer name, IP address, or browser preference as a substitute for authentication.
-- Do not persist account access tokens or passwords in browser storage.
+- Never store passwords, long-lived credentials or access tokens in persistent browser storage.
+- A user-opted-in browser may hold a short-lived token in tab-scoped session storage to support safe refreshes; verify the account again before opening records, expire the token and clear it on sign out.
+- When an expired session cannot be restored, require an explicit user sign-in and fresh file-access permission.
 - Private file permissions remain the ultimate data access boundary.
 - A successful authorised sign-in also requests private file-access permission in the same user-initiated flow; the application checks its storage folder automatically.
 - Do not require a separate connection button on ordinary successful sign-in.
@@ -81,6 +83,12 @@ ADD / EDIT / REMOVE FORM
 - Submit and Cancel must both be available even when fields are empty.
 - Cancel returns to the prior screen, with no save.
 - Submit updates the corresponding item log and month table.
+- Empty groups display a simple No items row instead of looking broken.
+- Add may create IN, Bills and Others entries for the current or future months, only after explicit submission; for existing items it may append a new month while preserving historical lines.
+- A second Add for the same item/month is refused until the edit flow is available.
+- New Bills and Others obligations start unpaid; actual payment updates are handled separately.
+- Saving entry creation is deferred until the payment flow can safely commit allocations and balances.
+- Optional retail, URL and remark for Others are appended as trailing tab-delimited fields after the core payment fields.
 - Incomplete submissions must not corrupt calculations; the precise safe representation is pending.
 - Amendments append revised log entries; historical lines remain preserved.
 - Do not edit completed previous months.
