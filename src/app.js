@@ -1,8 +1,9 @@
 import { initialiseGoogleLogin, restoreLoginSession, signIn, signOut, getDriveToken } from "./auth.js";
 import { findBillsFolder, readWalletTextFiles, addWalletItem, updateWalletItem } from "./drive.js";
+import { getMyrKrwRate, formatWalletCurrency, rateDateLabel } from "./currency.js";
 import {
   WALLET_GROUPS, parseWalletFiles, entriesForMonth,
-  monthKey, shiftedMonthKey, formatMonth, formatAmount
+  monthKey, shiftedMonthKey, formatMonth
 } from "./records.js";
 
 const TRUST_KEY = "home-wallet-remember-browser-v1";
@@ -17,6 +18,11 @@ let attemptedFastLogin = false;
 let signInReady = false;
 let editingEntry = null;
 let walletProgressTicket = 0;
+let displayCurrency = "MYR";
+let referenceRate = null;
+let currencyLoading = false;
+let currencyError = "";
+let currencyRequestId = 0;
 const expandedGroups = new Map(WALLET_GROUPS.map(group => [group, true]));
 const comparisonGroups = new Map(WALLET_GROUPS.map(group => [group, true]));
 
@@ -47,6 +53,22 @@ const otherMonthsPrev = document.getElementById("other-months-prev");
 const otherMonthsNext = document.getElementById("other-months-next");
 const otherMonthsLabel = document.getElementById("other-months-label");
 const otherMonthsBody = document.getElementById("other-months-table-body");
+const mainCurrencySelect = document.getElementById("main-currency-select");
+const otherCurrencySelect = document.getElementById("other-currency-select");
+const exchangeNotes = [
+  {
+    container: document.getElementById("main-exchange-info"),
+    text: document.getElementById("main-exchange-text"),
+    credit: document.getElementById("main-exchange-credit"),
+    progress: document.getElementById("main-exchange-progress")
+  },
+  {
+    container: document.getElementById("other-exchange-info"),
+    text: document.getElementById("other-exchange-text"),
+    credit: document.getElementById("other-exchange-credit"),
+    progress: document.getElementById("other-exchange-progress")
+  }
+];
 const refreshButton = document.getElementById("refresh-wallet-button");
 const addButton = document.getElementById("add-item-button");
 const addPanel = document.getElementById("add-item-panel");
@@ -117,8 +139,76 @@ function setItemProgress(message = "") {
   }
 }
 
+function updateExchangeNotes() {
+  const converted = displayCurrency === "KRW";
+  for (const note of exchangeNotes) {
+    note.container.hidden = !converted;
+    if (!converted) continue;
+    note.progress.hidden = !currencyLoading;
+    note.credit.hidden = currencyLoading || !!currencyError || !referenceRate;
+    note.text.textContent = currencyLoading
+      ? "Getting the latest exchange rate..."
+      : currencyError
+        ? currencyError
+        : referenceRate
+          ? "Approximate conversion · Rate updated " + rateDateLabel(referenceRate) +
+            " · Rounded up to the next ₩100."
+          : "Checking the exchange rate...";
+  }
+}
+
+async function refreshCurrencyRate() {
+  if (displayCurrency !== "KRW") return;
+  const requestId = ++currencyRequestId;
+  currencyLoading = true;
+  currencyError = "";
+  updateExchangeNotes();
+  try {
+    const latestRate = await getMyrKrwRate();
+    if (requestId !== currencyRequestId || displayCurrency !== "KRW") return;
+    referenceRate = latestRate;
+  } catch {
+    if (requestId !== currencyRequestId || displayCurrency !== "KRW") return;
+    referenceRate = null;
+    currencyError = "Couldn't get the exchange rate. Press Refresh to retry, or choose RM.";
+  } finally {
+    if (requestId === currencyRequestId && displayCurrency === "KRW") {
+      currencyLoading = false;
+      updateExchangeNotes();
+      renderMonth();
+      renderComparisonMonth();
+    }
+  }
+}
+
+function selectCurrency(value) {
+  if (value !== "MYR" && value !== "KRW") return;
+  ++currencyRequestId;
+  displayCurrency = value;
+  mainCurrencySelect.value = value;
+  otherCurrencySelect.value = value;
+  currencyLoading = false;
+  currencyError = "";
+  if (value === "KRW") referenceRate = null;
+  updateExchangeNotes();
+  renderMonth();
+  renderComparisonMonth();
+  if (value === "KRW") void refreshCurrencyRate();
+}
+
+mainCurrencySelect.addEventListener("change", () => selectCurrency(mainCurrencySelect.value));
+otherCurrencySelect.addEventListener("change", () => selectCurrency(otherCurrencySelect.value));
+
 function resetWallet() {
   connectionVersion++;
+  ++currencyRequestId;
+  displayCurrency = "MYR";
+  referenceRate = null;
+  currencyLoading = false;
+  currencyError = "";
+  mainCurrencySelect.value = "MYR";
+  otherCurrencySelect.value = "MYR";
+  updateExchangeNotes();
   walletProgressTicket++;
   walletProgress.hidden = true;
   walletProgressText.textContent = "";
@@ -234,7 +324,10 @@ function renderTable(month, target, groupStates, fromComparison = false) {
     for (const entry of entries) {
       const row = document.createElement("tr");
       addTextCell(row, entry.item, "wallet-item");
-      addTextCell(row, formatAmount(entry.group === "Saving" ? entry.balance : entry.amount), "wallet-amount");
+      addTextCell(row, formatWalletCurrency(
+        entry.group === "Saving" ? entry.balance : entry.amount,
+        displayCurrency, referenceRate
+      ), "wallet-amount");
       addTextCell(row, entry.remark || "—", "wallet-detail");
 
       const actionCell = document.createElement("td");
@@ -607,6 +700,7 @@ window.addEventListener("resize", () => {
 refreshButton.addEventListener("click", () => {
   if (activeFolderId) {
     void loadWalletRecords();
+    if (displayCurrency === "KRW") void refreshCurrencyRate();
   } else {
     setWalletMessage("Storage is not connected. Sign out and sign in again.", true);
   }
