@@ -436,10 +436,37 @@ select:focus-visible {
   opacity: .78;
   cursor: not-allowed;
 }
+/* Form actions match the small top-row buttons.
+   Delete stays left; Cancel and Submit/Update stay right. */
 .form-actions {
   display: flex;
-  gap: .7rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: .65rem;
   flex-wrap: wrap;
+}
+.form-actions-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: .55rem;
+  margin-left: auto;
+}
+.form-actions button {
+  font-size: .9rem;
+  min-height: 2.35rem;
+  padding: .53rem 1.05rem;
+  font-weight: 500;
+}
+#delete-item-button {
+  --btn-bg: #f3a998;
+  --btn-hover: #eda28f;
+  --btn-text: #5e2b25;
+}
+#cancel-item-button {
+  --btn-bg: var(--pearl-aqua);
+  --btn-hover: #a7d9d2;
+  --btn-text: #004b51;
 }
 .form-status { color: #91372c; font-size: .96rem; min-height: 1rem; }
 .visually-hidden {
