@@ -1,15 +1,17 @@
-/* Home wallet visual theme: Segoe UI and the agreed five-colour palette. */
+/* Home wallet: Fredoka headline, Nunito text, softly raised pill buttons. */
 :root {
   color-scheme: light;
-  font-family: "Segoe UI", Tahoma, sans-serif;
+  font-family: "Nunito", "Trebuchet MS", sans-serif;
   --stormy-teal: #006d77;
   --pearl-aqua: #83c5be;
   --alice-blue: #edf6f9;
   --almond-silk: #ffddd2;
   --tangerine-dream: #e29578;
+  --sunshine-gold: #ffc857;
+  --soft-indigo: #5964a8;
   --paper: #ffffff;
   --line: #83c5be;
-  --soft-shadow: 0 4px 12px rgba(0, 109, 119, 0.12);
+  --soft-shadow: 0 7px 16px rgba(89, 100, 168, 0.16), 0 2px 5px rgba(0, 109, 119, 0.07);
   color: var(--stormy-teal);
   background: var(--paper);
 }
@@ -18,36 +20,40 @@ body { margin: 0; background: var(--paper); color: var(--stormy-teal); }
 main { max-width: 65rem; margin: 2rem auto; padding: 0 1.1rem 3rem; }
 h1 {
   margin: 0 0 1.25rem;
-  font-size: clamp(1.8rem, 4.5vw, 2.5rem);
-  font-weight: 800;
-  letter-spacing: -0.025em;
+  font-family: "Fredoka", "Nunito", sans-serif;
+  font-size: clamp(2.35rem, 5vw, 3.6rem);
+  font-weight: 700;
+  line-height: 1.06;
+  letter-spacing: 0.005em;
 }
-h2 { font-size: 1.18rem; margin: 0.35rem 0 0.9rem; font-weight: 750; }
+h2 { font-size: 1.18rem; margin: 0.35rem 0 0.9rem; font-weight: 700; }
+.brand-home { color: var(--stormy-teal); }
+.brand-wallet { color: var(--soft-indigo); }
 p { line-height: 1.5; }
 
 button {
-  border: 1px solid var(--stormy-teal);
+  border: 0;
   border-radius: 999px;
-  padding: 0.7rem 1.1rem;
-  min-height: 2.75rem;
+  padding: 0.75rem 1.5rem;
+  min-height: 3rem;
   background: var(--alice-blue);
   color: var(--stormy-teal);
   font: inherit;
   font-weight: 700;
   cursor: pointer;
   box-shadow: var(--soft-shadow);
-  transition: background-color 120ms ease, box-shadow 120ms ease;
+  transition: background-color 120ms ease, box-shadow 120ms ease, transform 120ms ease;
 }
 button:hover:not(:disabled) { background: var(--pearl-aqua); }
-button:active:not(:disabled) { box-shadow: 0 2px 5px rgba(0, 109, 119, 0.15); }
+button:active:not(:disabled) { box-shadow: 0 2px 5px rgba(0, 109, 119, 0.15); transform: translateY(1px); }
 button:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
 button:focus-visible,
 summary:focus-visible { outline: 3px solid var(--tangerine-dream); outline-offset: 3px; }
 [hidden] { display: none !important; }
 
 /* Sign-in screen */
-#login-button { background: var(--stormy-teal); color: var(--paper); }
-#login-button:hover:not(:disabled) { background: #005860; }
+#login-button { background: var(--sunshine-gold); color: var(--stormy-teal); }
+#login-button:hover:not(:disabled) { background: var(--tangerine-dream); }
 .remember-label {
   display: flex; align-items: center; gap: 0.55rem;
   font-size: 0.92rem; margin: 0.8rem 0; cursor: pointer;
@@ -100,7 +106,7 @@ summary:focus-visible { outline: 3px solid var(--tangerine-dream); outline-offse
   display: flex; align-items: center; justify-content: center;
   flex-wrap: wrap; gap: 0.7rem; margin: 1.2rem 0;
 }
-#month-label { min-width: 10rem; text-align: center; font-size: 1.06rem; font-weight: 750; }
+#month-label { min-width: 10rem; text-align: center; font-size: 1.06rem; font-weight: 700; }
 .month-nav button { background: var(--alice-blue); }
 
 /* Consolidated monthly table */
@@ -119,7 +125,7 @@ summary:focus-visible { outline: 3px solid var(--tangerine-dream); outline-offse
   vertical-align: top;
 }
 .wallet-table thead { background: var(--alice-blue); }
-.wallet-table th { font-weight: 750; }
+.wallet-table th { font-weight: 700; }
 .wallet-table tr:last-child td { border-bottom: 0; }
 .group-heading th { background: var(--pearl-aqua); padding: 0; }
 .group-toggle {
@@ -128,10 +134,10 @@ summary:focus-visible { outline: 3px solid var(--tangerine-dream); outline-offse
   background: transparent; box-shadow: none;
   text-align: left; padding: 0.9rem 1rem;
   color: var(--stormy-teal);
-  font-weight: 800;
+  font-weight: 700;
 }
 .group-toggle:hover:not(:disabled) { background: var(--alice-blue); }
-.wallet-item { font-weight: 700; }
+.wallet-item { font-weight: 600; }
 .wallet-amount { font-variant-numeric: tabular-nums; white-space: nowrap; }
 .wallet-detail { color: #355e63; }
 
@@ -149,8 +155,8 @@ summary:focus-visible { outline: 3px solid var(--tangerine-dream); outline-offse
 }
 
 /* Item entry form; no items are created until the user submits. */
-#add-item-button { background: var(--stormy-teal); color: var(--paper); }
-#add-item-button:hover:not(:disabled) { background: #005860; }
+#add-item-button { background: var(--sunshine-gold); color: var(--stormy-teal); }
+#add-item-button:hover:not(:disabled) { background: var(--tangerine-dream); }
 .empty-row td {
   color: #416c70;
   padding: 0.9rem 1.25rem;
@@ -176,7 +182,7 @@ summary:focus-visible { outline: 3px solid var(--tangerine-dream); outline-offse
   flex-direction: column;
   gap: 0.35rem;
   font-size: 0.9rem;
-  font-weight: 700;
+  font-weight: 600;
 }
 .add-grid input, .add-grid select {
   width: 100%;
@@ -195,8 +201,8 @@ summary:focus-visible { outline: 3px solid var(--tangerine-dream); outline-offse
 }
 .form-status { color: #993e2b; font-size: 0.9rem; min-height: 1rem; }
 .form-actions { display: flex; gap: 0.6rem; flex-wrap: wrap; }
-#submit-item-button { color: var(--paper); background: var(--stormy-teal); }
-#submit-item-button:hover:not(:disabled) { background: #005860; }
+#submit-item-button { color: var(--stormy-teal); background: var(--sunshine-gold); }
+#submit-item-button:hover:not(:disabled) { background: var(--tangerine-dream); }
 #cancel-item-button { background: var(--almond-silk); }
 #cancel-item-button:hover:not(:disabled) { background: var(--tangerine-dream); }
 
