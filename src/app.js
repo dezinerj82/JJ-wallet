@@ -1,5 +1,5 @@
 import { initialiseGoogleLogin, signIn, signOut, getDriveToken } from "./auth.js";
-import { findBillsFolder, readWalletTextFiles, testTextStorage } from "./drive.js";
+import { findBillsFolder, readWalletTextFiles } from "./drive.js";
 import {
   WALLET_GROUPS, parseWalletFiles, entriesForMonth,
   monthKey, shiftedMonthKey, formatMonth, formatAmount
@@ -16,19 +16,15 @@ let attemptedFastLogin = false;
 let signInReady = false;
 const expandedGroups = new Map(WALLET_GROUPS.map(group => [group, true]));
 
+const loginView = document.getElementById("login-view");
 const status = document.getElementById("setup-status");
 const signInActions = document.getElementById("sign-in-actions");
 const loginButton = document.getElementById("login-button");
 const rememberBrowser = document.getElementById("remember-browser");
-const signedInView = document.getElementById("signed-in-view");
-const signedInAccount = document.getElementById("signed-in-account");
 const unauthorizedView = document.getElementById("unauthorized-view");
 const unauthorizedAccount = document.getElementById("unauthorized-account");
 const unauthorizedLogoutButton = document.getElementById("unauthorized-logout-button");
 const logoutButton = document.getElementById("logout-button");
-const driveStatus = document.getElementById("drive-status");
-const testStorageButton = document.getElementById("test-storage-button");
-const testTools = document.getElementById("storage-test-tools");
 
 const walletView = document.getElementById("wallet-view");
 const walletState = document.getElementById("wallet-state");
@@ -45,11 +41,11 @@ function readRememberedBrowser() {
 }
 
 function setRememberedBrowser(remember) {
-  // Preference only. Never store passwords, access tokens or wallet records.
+  // Convenience preference only, never passwords, access tokens or wallet records.
   try {
     if (remember) localStorage.setItem(TRUST_KEY, "yes");
     else localStorage.removeItem(TRUST_KEY);
-  } catch { /* Browser storage can be disabled. */ }
+  } catch { /* Browser storage may be disabled. */ }
 }
 
 rememberBrowser.checked = readRememberedBrowser();
@@ -60,41 +56,45 @@ function refreshLoginButton() {
   loginButton.disabled = !signInReady;
 }
 
+// Ordinary loading messages are read to assistive technologies, not shown as logs.
+// Only errors and data warnings become visible in the wallet.
+function setWalletMessage(message, problem = false) {
+  walletState.textContent = message;
+  walletState.classList.toggle("visually-hidden", !problem);
+  walletState.classList.toggle("wallet-message-error", problem);
+}
+
 function resetWallet() {
   connectionVersion++;
   activeFolderId = null;
   walletEntries = [];
   walletView.hidden = true;
   walletTableWrap.hidden = true;
-  testTools.hidden = true;
-  testTools.open = false;
-  testStorageButton.disabled = false;
+  walletTableBody.replaceChildren();
+  setWalletMessage("");
   selectedMonth = currentMonth;
 }
 
 function showSignedOut(message = "Sign in with your Google account.") {
   resetWallet();
+  loginView.hidden = false;
   signInActions.hidden = false;
-  signedInView.hidden = true;
   unauthorizedView.hidden = true;
-  signedInAccount.textContent = "";
   unauthorizedAccount.textContent = "";
-  driveStatus.textContent = "Google Drive is not connected.";
   status.textContent = message;
   refreshLoginButton();
 }
 
-function showSignedIn(email) {
+function showSignedIn() {
   resetWallet();
   setRememberedBrowser(rememberBrowser.checked);
   attemptedFastLogin = false;
   selectingAccountRequired = false;
-  signInActions.hidden = true;
-  unauthorizedView.hidden = true;
-  signedInView.hidden = false;
-  signedInAccount.textContent = "Signed in as " + email;
-  status.textContent = "Google identity confirmed.";
-  driveStatus.textContent = "Checking private Drive storage...";
+  loginView.hidden = true;
+  walletView.hidden = false;
+  setWalletMessage("Checking private Drive storage...");
+  monthLabel.textContent = formatMonth(selectedMonth);
+  prevButton.disabled = true;
 }
 
 function showUnauthorized(email) {
@@ -104,8 +104,8 @@ function showUnauthorized(email) {
   selectingAccountRequired = true;
   rememberBrowser.checked = false;
   setRememberedBrowser(false);
+  loginView.hidden = false;
   signInActions.hidden = true;
-  signedInView.hidden = true;
   unauthorizedView.hidden = false;
   unauthorizedAccount.textContent = "Signed in as " + email;
   status.textContent = "Google identity confirmed.";
@@ -151,19 +151,6 @@ function renderMonth() {
     rows.append(headingRow);
 
     if (!expanded) continue;
-    if (!entries.length) {
-      const empty = document.createElement("tr");
-      empty.className = "empty-row";
-      const cell = document.createElement("td");
-      cell.colSpan = 3;
-      cell.textContent = group === "Saving"
-        ? "No confirmed savings balance recorded."
-        : "No entries recorded for this month.";
-      empty.append(cell);
-      rows.append(empty);
-      continue;
-    }
-
     for (const entry of entries) {
       const row = document.createElement("tr");
       addTextCell(row, entry.item, "wallet-item");
@@ -193,7 +180,7 @@ async function loadWalletRecords() {
   walletView.hidden = false;
   walletTableWrap.hidden = true;
   refreshButton.disabled = true;
-  walletState.textContent = "Reading wallet TXT files from your private Drive folder...";
+  setWalletMessage("Reading wallet records...");
 
   try {
     const files = await readWalletTextFiles(getDriveToken(), folderId);
@@ -202,23 +189,19 @@ async function loadWalletRecords() {
     walletEntries = parsed.entries;
     renderMonth();
     walletTableWrap.hidden = false;
-
-    if (!files.length) {
-      walletState.textContent =
-        "No wallet item TXT files yet. Storage test files are excluded.";
-    } else if (parsed.invalidLines) {
-      walletState.textContent =
+    if (parsed.invalidLines) {
+      setWalletMessage(
         "Some TXT rows could not be read (" + parsed.invalidLines +
-        "). Only valid recorded entries are shown; review your files.";
+        "). Only valid records are shown. Review your files.", true
+      );
     } else {
-      walletState.textContent =
-        "Wallet records loaded. Showing entries for the selected month.";
+      setWalletMessage("");
     }
   } catch (error) {
     if (version !== connectionVersion) return;
     walletEntries = [];
     walletTableWrap.hidden = true;
-    walletState.textContent = error.message || "Could not read wallet records.";
+    setWalletMessage(error.message || "Could not read wallet records.", true);
   } finally {
     if (version === connectionVersion) refreshButton.disabled = false;
   }
@@ -233,22 +216,19 @@ async function onDriveReady() {
     const folder = await findBillsFolder(token);
     if (version !== connectionVersion || !getDriveToken()) return;
     if (!folder) {
-      driveStatus.textContent =
-        "Wallet bills folder not found. Check its Drive access. No new folder was created.";
+      setWalletMessage(
+        "Wallet bills folder not found. Check its Drive access. No folder was created.", true
+      );
       return;
     }
     activeFolderId = folder.id;
-    testTools.hidden = false;
-    driveStatus.textContent = folder.name === "Wallet bills"
-      ? "Google Drive connected. Wallet bills folder found."
-      : "Drive connected to existing folder: " + folder.name +
-        ". Rename it to Wallet bills in Drive.";
+    if (folder.name !== "Wallet bills") {
+      setWalletMessage("Rename the connected Drive folder to Wallet bills.", true);
+    }
     await loadWalletRecords();
   } catch (error) {
     if (version !== connectionVersion) return;
-    walletView.hidden = true;
-    testTools.hidden = true;
-    driveStatus.textContent = error.message || "Google Drive could not be checked.";
+    setWalletMessage(error.message || "Google Drive could not be checked.", true);
   }
 }
 
@@ -262,7 +242,7 @@ loginButton.addEventListener("click", () => {
     const fast = rememberBrowser.checked && !selectingAccountRequired;
     attemptedFastLogin = fast;
     status.textContent = fast ? "Trying faster Google sign-in..." : "Opening Google sign-in...";
-    signIn({ fast }); // Must be called directly from the user's click.
+    signIn({ fast }); // Must run from a direct user click.
   } catch (error) {
     selectingAccountRequired = true;
     showSignedOut(error.message);
@@ -282,28 +262,10 @@ nextButton.addEventListener("click", () => {
 });
 
 refreshButton.addEventListener("click", () => {
-  if (activeFolderId) void loadWalletRecords();
-});
-
-testStorageButton.addEventListener("click", async () => {
-  if (!activeFolderId || !getDriveToken()) {
-    driveStatus.textContent = "Please sign in again to access Wallet bills.";
-    return;
-  }
-  const version = connectionVersion;
-  testStorageButton.disabled = true;
-  driveStatus.textContent = "Testing TXT save and read...";
-  try {
-    const result = await testTextStorage(getDriveToken(), activeFolderId);
-    if (version !== connectionVersion) return;
-    driveStatus.textContent =
-      "TXT storage confirmed: " + result.name + " was saved and read successfully.";
-  } catch (error) {
-    if (version === connectionVersion) {
-      driveStatus.textContent = error.message || "TXT storage test failed.";
-    }
-  } finally {
-    if (version === connectionVersion) testStorageButton.disabled = false;
+  if (activeFolderId) {
+    void loadWalletRecords();
+  } else {
+    setWalletMessage("Storage is not connected. Sign out and sign in again.", true);
   }
 });
 
@@ -334,8 +296,8 @@ try {
     },
     onDriveReady,
     onDriveError: message => {
-      resetWallet();
-      driveStatus.textContent = message;
+      activeFolderId = null;
+      setWalletMessage(message, true);
     }
   });
   signInReady = true;
