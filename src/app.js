@@ -4,7 +4,7 @@ import { getMyrKrwRate, formatWalletCurrency, rateDateLabel } from "./currency.j
 import { displayGroup, availableGroups, isCustomGroup, NEW_CATEGORY, NEW_ITEM } from "./groups.js";
 import { buildMeta, parseAllMetadata, serviceReminders, effectiveServiceMonth, metaKey } from "./private-meta.js";
 import {
-  WALLET_GROUPS, parseWalletFiles, entriesForMonth, calculateMonthlyBalance,
+  WALLET_GROUPS, parseWalletFiles, entriesForMonth, calculateMonthlyPlan,
   monthKey, shiftedMonthKey, formatMonth
 } from "./records.js";
 
@@ -117,6 +117,7 @@ const savingsPanel = document.getElementById("saving-settings-panel");
 const savingsForm = document.getElementById("saving-settings-form");
 const savingsName = document.getElementById("saving-settings-name");
 const savingsAccessible = document.getElementById("saving-accessible");
+const savingsMonthlyTarget = document.getElementById("saving-monthly-target");
 const savingsNote = document.getElementById("saving-hover-note");
 const savingsStatus = document.getElementById("saving-settings-status");
 const savingsCancel = document.getElementById("saving-settings-cancel");
@@ -441,6 +442,12 @@ async function showDueServiceReminders() {
 
 function renderTable(month, target, groupStates, fromComparison = false) {
   const groups = entriesForMonth(walletEntries, month);
+  let savingPlan = null;
+  try {
+    savingPlan = calculateMonthlyPlan(walletEntries, month);
+  } catch {
+    // Display saved entries even if a planning total cannot be calculated.
+  }
   const rows = document.createDocumentFragment();
 
   for (const group of availableGroups(walletEntries)) {
@@ -483,11 +490,23 @@ function renderTable(month, target, groupStates, fromComparison = false) {
     for (const entry of entries) {
       const row = document.createElement("tr");
       addItemNameCell(row, entry);
-      addTextCell(row, formatWalletCurrency(
+      const viewCurrency = fromComparison ? displayCurrencies.other : displayCurrencies.main;
+      const amountCell = addTextCell(row, formatWalletCurrency(
         entry.group === "Saving" ? entry.balance : entry.amount,
-        fromComparison ? displayCurrencies.other : displayCurrencies.main,
-        referenceRate
+        viewCurrency, referenceRate
       ), "wallet-amount");
+      const planned = entry.group === "Saving"
+        ? savingPlan?.savingPlans.get(entry.item) : null;
+      if (planned) {
+        const amountNote = document.createElement("small");
+        amountNote.className = "saving-plan-detail" +
+          (planned.adjusted ? " saving-plan-adjusted" : "");
+        amountNote.textContent = (planned.adjusted ? "Adjusted: " : "Save: ") +
+          formatWalletCurrency(planned.amount, viewCurrency, referenceRate);
+        amountNote.title = "Target: " +
+          formatWalletCurrency(planned.requested, viewCurrency, referenceRate);
+        amountCell.append(amountNote);
+      }
       addTextCell(row, entry.remark || "—", "wallet-detail");
 
       const actionCell = document.createElement("td");
@@ -545,11 +564,14 @@ function renderBalance() {
     return;
   }
   try {
-    const balance = calculateMonthlyBalance(walletEntries, currentMonth);
+    const plan = calculateMonthlyPlan(walletEntries, currentMonth);
     walletBalanceAmount.textContent = formatWalletCurrency(
-      balance, displayCurrencies.main, referenceRate
+      plan.balance, displayCurrencies.main, referenceRate
     );
-    walletBalanceOutput.title = "Planned monthly balance; not an actual bank balance.";
+    walletBalanceOutput.title = plan.insufficientForBills
+      ? "Income is below committed spending."
+      : plan.savingsAdjusted ? "Savings adjusted for this month."
+      : "Planned balance, not a bank balance.";
   } catch {
     walletBalanceAmount.textContent = "—";
     walletBalanceOutput.title = "Couldn't calculate the balance. Please refresh.";
@@ -898,6 +920,7 @@ function openSavingSettings(entry) {
   editingSavings = { ...latest };
   savingsName.textContent = latest.item;
   savingsAccessible.checked = latest.meta?.access === "accessible";
+  savingsMonthlyTarget.value = String(latest.meta?.monthlySaving || 0);
   savingsNote.value = latest.meta?.note || "";
   savingsStatus.textContent = "";
   savingsPanel.hidden = false;
@@ -916,7 +939,8 @@ savingsForm.addEventListener("submit", async event => {
   try {
     await saveSavingSettings(getDriveToken(), activeFolderId, previous, {
       access: savingsAccessible.checked ? "accessible" : "protected",
-      note: savingsNote.value
+      note: savingsNote.value,
+      monthlySaving: savingsMonthlyTarget.value
     });
     if (version !== connectionVersion) return;
     closeSavingSettings();
