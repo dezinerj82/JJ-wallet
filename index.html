@@ -50,6 +50,11 @@
         <button type="button" id="month-next-button">Next month</button>
       </nav>
 
+      <div id="wallet-progress" class="operation-progress" hidden>
+        <p id="wallet-progress-text" class="operation-progress-text" aria-live="polite"></p>
+        <div class="progress-track" role="progressbar" aria-label="Wallet activity"><span class="progress-motion"></span></div>
+      </div>
+
       <section id="add-item-panel" class="add-item-panel" aria-labelledby="add-item-heading" hidden>
         <h3 id="add-item-heading">Add item</h3>
         <form id="add-item-form" autocomplete="off">
