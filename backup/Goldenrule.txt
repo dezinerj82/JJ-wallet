@@ -59,6 +59,9 @@ WALLET ACCESS PROCESS
 - Every new session still requires successful identity verification; never use computer name, IP address, or browser preference as a substitute for authentication.
 - Do not persist account access tokens or passwords in browser storage.
 - Private file permissions remain the ultimate data access boundary.
+- A successful authorised sign-in also requests private file-access permission in the same user-initiated flow; the application checks its storage folder automatically.
+- Do not require a separate connection button on ordinary successful sign-in.
+- When the short-lived permission expires, require renewed user action; do not store a permanent browser token or promise uninterrupted sessions.
 
 MAIN VIEW
 - One month-based consolidated table with collapsible groups and item details.
