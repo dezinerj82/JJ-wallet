@@ -6,7 +6,13 @@ const MONTH = /^(?:19|20|21)\d{2}(?:0[1-9]|1[0-2])$/;
 
 export function validMeta(meta) {
   const target = meta?.monthlySaving ?? 0;
-  return !!meta && typeof (meta.hoverUnpaid ?? false) === "boolean" &&
+  const openingBalance = meta?.openingBalance ?? null;
+  return !!meta &&
+    (openingBalance === null ||
+      (meta.group === "Saving" && Number.isFinite(openingBalance) &&
+       openingBalance >= 0 && Number.isSafeInteger(Math.round(openingBalance * 100)) &&
+       Math.abs(openingBalance * 100 - Math.round(openingBalance * 100)) < 0.000001)) &&
+    typeof (meta.hoverUnpaid ?? false) === "boolean" &&
     Number.isFinite(target) && target >= 0 &&
     Number.isSafeInteger(Math.round(target * 100)) &&
     Math.abs(target * 100 - Math.round(target * 100)) < 0.000001 &&
@@ -32,6 +38,8 @@ export function buildMeta(group, item, input = {}) {
     remindBefore: Number(input.remindBefore || 0),
     access: group === "Saving" ? String(input.access || "protected") : "",
     monthlySaving: group === "Saving" ? Number(input.monthlySaving || 0) : 0,
+    openingBalance: group === "Saving" && input.openingBalance != null
+      ? Number(input.openingBalance) : null,
     hoverUnpaid: group !== "Saving" && input.hoverUnpaid === true
   };
   if (!validMeta(meta)) throw new Error("Check the item details.");
@@ -53,6 +61,9 @@ export function parseMetaLine(line) {
     }
     if (value && typeof value === "object" && value.hoverUnpaid === undefined) {
       value.hoverUnpaid = false;
+    }
+    if (value && typeof value === "object" && value.openingBalance === undefined) {
+      value.openingBalance = null;
     }
     return validMeta(value) ? value : null;
   } catch {
