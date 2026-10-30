@@ -520,7 +520,8 @@ function renderTable(month, target, groupStates, fromComparison = false) {
           if (entry.group === "Saving") openSavingSettings(entry);
           else openUpdateForm(entry);
           if (fromComparison) {
-            addPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+            const panel = entry.group === "Saving" ? savingsPanel : addPanel;
+            panel.scrollIntoView({ behavior: "smooth", block: "start" });
           }
         });
       }
