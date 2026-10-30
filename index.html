@@ -10,8 +10,16 @@
 <body>
   <main id="app">
     <h1>Home wallet</h1>
-    <p>Login to start</p>
-    <p id="setup-status">Google sign-in has not been configured yet.</p>
+    <section aria-labelledby="login-heading">
+      <h2 id="login-heading">Login to start</h2>
+      <p id="setup-status" role="status" aria-live="polite">Preparing Google sign-in...</p>
+      <button type="button" id="login-button" disabled>Sign in with Google</button>
+      <div id="signed-in-view" hidden>
+        <p id="signed-in-account"></p>
+        <p>You're signed in. Financial records are not connected yet.</p>
+        <button type="button" id="logout-button">Sign out</button>
+      </div>
+    </section>
   </main>
 </body>
 </html>
