@@ -988,8 +988,15 @@ export async function importWalletSetup(token, folderId, source, onProgress = ()
     }
     if (entry.schedule) {
       const prior = lastSchedule(existing, entry.group, entry.item);
-      const legacyRecurring = existing.split("\n").some(line =>
-        line.startsWith("@RECUR\tBills\t" + entry.item + "\t"));
+      const legacy = entry.group === "Bills"
+        ? latestRecurringRule(existing, entry.item) : null;
+      const legacyRecurring = legacy?.active === true;
+      if (legacyRecurring &&
+          (entry.schedule.type !== "monthly" ||
+           entry.schedule.amount !== legacy.amount ||
+           entry.schedule.changes?.length || entry.schedule.end)) {
+        throw new Error("Existing recurring rule for " + entry.item + " needs review.");
+      }
       if (!prior && !legacyRecurring) lines += scheduleLine(entry.schedule);
       const effective = prior || (!legacyRecurring ? entry.schedule : null);
       if (effective?.active) {
