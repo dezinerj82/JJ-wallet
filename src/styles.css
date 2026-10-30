@@ -307,7 +307,8 @@ select:focus-visible {
   --btn-hover: #ffdfd4;
   --btn-text: #783f30;
 }
-.group-others {
+.group-others,
+.group-custom {
   --btn-bg: #e7e8f7;
   --btn-hover: #d9dcf1;
   --btn-text: #404a82;
