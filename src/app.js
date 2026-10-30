@@ -470,7 +470,11 @@ async function showDueServiceReminders() {
       id: metaKey(reminder.group, reminder.item) + ":" + reminder.dueMonth,
       text: reminder.item + " · Service due " + formatMonth(reminder.dueMonth)
     }));
-  upcoming.push(...plannedAlerts(walletSchedules));
+  upcoming.push(...plannedAlerts(walletSchedules).filter(alert => {
+    const meta = walletMetadata.get(metaKey(alert.group,alert.item));
+    // Service schedules follow the latest paid service, not a fixed old date.
+    return !meta?.lastService || !meta?.interval;
+  }));
   for (const reminder of upcoming) {
     if (!activeFolderId || !getDriveToken()) return;
     if (reminderSeen.has(reminder.id)) continue;
