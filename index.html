@@ -127,6 +127,15 @@
         <a id="main-exchange-credit" href="https://www.exchangerate-api.com" target="_blank" rel="noopener noreferrer" hidden>Rates by Exchange Rate API</a>
         <div id="main-exchange-progress" class="progress-track exchange-progress-track" hidden><span class="progress-motion"></span></div>
       </div>
+
+      <div id="wallet-balance-row" class="wallet-balance-row" hidden>
+        <output id="wallet-balance" class="wallet-balance-pill" aria-live="polite"
+          aria-describedby="wallet-balance-description">
+          <span>Balance :</span>
+          <span id="wallet-balance-amount">—</span>
+        </output>
+        <span id="wallet-balance-description" class="visually-hidden">Monthly estimate based on saved income, bills, other expenses and current-month savings additions. This is not an actual bank balance.</span>
+      </div>
     </section>
   </main>
 
