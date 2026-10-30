@@ -2,7 +2,7 @@ import { initialiseGoogleLogin, restoreLoginSession, signIn, signOut, getDriveTo
 import { findBillsFolder, readWalletTextFiles, addWalletItem, updateWalletItem, deleteWalletItem } from "./drive.js";
 import { getMyrKrwRate, formatWalletCurrency, rateDateLabel } from "./currency.js";
 import {
-  WALLET_GROUPS, parseWalletFiles, entriesForMonth,
+  WALLET_GROUPS, parseWalletFiles, entriesForMonth, calculateMonthlyBalance,
   monthKey, shiftedMonthKey, formatMonth
 } from "./records.js";
 
@@ -11,6 +11,8 @@ const currentMonth = monthKey(new Date());
 let selectedMonth = currentMonth;
 let comparisonMonth = shiftedMonthKey(currentMonth, 1);
 let walletEntries = [];
+let walletBalanceReady = false;
+let walletBalanceComplete = false;
 let activeFolderId = null;
 let connectionVersion = 0;
 let selectingAccountRequired = false;
@@ -44,6 +46,9 @@ const itemProgress = document.getElementById("item-progress");
 const itemProgressText = document.getElementById("item-progress-text");
 const walletTableWrap = document.getElementById("wallet-table-wrap");
 const walletTableBody = document.getElementById("wallet-table-body");
+const walletBalanceRow = document.getElementById("wallet-balance-row");
+const walletBalanceOutput = document.getElementById("wallet-balance");
+const walletBalanceAmount = document.getElementById("wallet-balance-amount");
 const monthLabel = document.getElementById("month-label");
 const otherMonthsButton = document.getElementById("other-months-button");
 const otherMonthsWindow = document.getElementById("other-months-window");
@@ -234,6 +239,11 @@ function resetWallet() {
   setItemProgress();
   activeFolderId = null;
   walletEntries = [];
+  walletBalanceReady = false;
+  walletBalanceComplete = false;
+  walletBalanceRow.hidden = true;
+  walletBalanceAmount.textContent = "—";
+  walletBalanceOutput.removeAttribute("title");
   walletView.hidden = true;
   walletTableWrap.hidden = true;
   walletTableBody.replaceChildren();
@@ -392,11 +402,35 @@ function renderTable(month, target, groupStates, fromComparison = false) {
   target.replaceChildren(rows);
 }
 
+function renderBalance() {
+  if (!walletBalanceReady || !activeFolderId || walletView.hidden) {
+    walletBalanceRow.hidden = true;
+    return;
+  }
+  walletBalanceRow.hidden = false;
+  if (!walletBalanceComplete) {
+    walletBalanceAmount.textContent = "—";
+    walletBalanceOutput.title = "Some records couldn't be read. Balance isn't available.";
+    return;
+  }
+  try {
+    const balance = calculateMonthlyBalance(walletEntries, currentMonth);
+    walletBalanceAmount.textContent = formatWalletCurrency(
+      balance, displayCurrencies.main, referenceRate
+    );
+    walletBalanceOutput.title = "Planned monthly balance; not an actual bank balance.";
+  } catch {
+    walletBalanceAmount.textContent = "—";
+    walletBalanceOutput.title = "Couldn't calculate the balance. Please refresh.";
+  }
+}
+
 function renderMonth() {
   // The main page always displays the current month.
   selectedMonth = currentMonth;
   monthLabel.textContent = formatMonth(currentMonth);
   renderTable(currentMonth, walletTableBody, expandedGroups);
+  renderBalance();
 }
 
 function renderComparisonMonth() {
@@ -443,6 +477,9 @@ async function loadWalletRecords(message = "Refreshing your items...") {
   const ticket = beginWalletProgress(message);
   walletView.hidden = false;
   walletTableWrap.hidden = true;
+  walletBalanceReady = false;
+  walletBalanceComplete = false;
+  walletBalanceRow.hidden = true;
   refreshButton.disabled = true;
   addButton.disabled = true;
   setWalletMessage("Loading items...");
@@ -452,6 +489,8 @@ async function loadWalletRecords(message = "Refreshing your items...") {
     if (version !== connectionVersion || !getDriveToken()) return;
     const parsed = parseWalletFiles(files);
     walletEntries = parsed.entries;
+    walletBalanceReady = true;
+    walletBalanceComplete = parsed.invalidLines === 0;
     renderMonth();
     renderComparisonMonth();
     walletTableWrap.hidden = false;
@@ -466,6 +505,9 @@ async function loadWalletRecords(message = "Refreshing your items...") {
   } catch (error) {
     if (version !== connectionVersion) return;
     walletEntries = [];
+    walletBalanceReady = false;
+    walletBalanceComplete = false;
+    walletBalanceRow.hidden = true;
     walletTableWrap.hidden = true;
     closeOtherMonths(false);
     setWalletMessage(error.message || "Could not read wallet records.", true);
