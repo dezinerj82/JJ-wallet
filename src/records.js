@@ -174,6 +174,10 @@ export function calculateMonthlyPlan(allEntries, month) {
       return next;
     }, 0);
   const committedSavings = sum(groups.Saving.filter(e => e.month === month), "added");
+  const committedSpending = expenses + committedSavings;
+  if (!Number.isSafeInteger(committedSpending)) {
+    throw new Error("Monthly commitments are too large.");
+  }
 
   // A current-month savings snapshot already exists in the private ledger.
   // Treat it as committed and never overwrite or plan a second allocation.
@@ -187,7 +191,7 @@ export function calculateMonthlyPlan(allEntries, month) {
     if (!Number.isSafeInteger(requested)) throw new Error("Savings plan is too large.");
   }
 
-  const available = Math.max(0, income - expenses - committedSavings);
+  const available = Math.max(0, income - committedSpending);
   const budget = Math.min(available, requested);
   const savingPlans = new Map();
   if (requested > 0) {
@@ -223,7 +227,7 @@ export function calculateMonthlyPlan(allEntries, month) {
     }
   }
 
-  const remainingCents = income - expenses - committedSavings - budget;
+  const remainingCents = income - committedSpending - budget;
   if (!Number.isSafeInteger(remainingCents)) {
     throw new Error("Monthly balance is too large.");
   }
@@ -236,7 +240,7 @@ export function calculateMonthlyPlan(allEntries, month) {
     balance: remainingCents / 100,
     savingPlans,
     savingsAdjusted: budget < requested,
-    insufficientForBills: income < expenses + committedSavings
+    insufficientForBills: income < committedSpending
   };
 }
 
