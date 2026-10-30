@@ -847,6 +847,7 @@ export async function saveSavingSettings(token, folderId, previous, input) {
   const meta = buildMeta("Saving", previous.item, {
     ...input,
     openingBalance: previous.meta?.openingBalance ?? null,
+    savingFromMonth: previous.meta?.savingFromMonth || "202611",
     access: input?.access === "accessible" ? "accessible" : "protected",
     interval: 0, remindBefore: 0, lastService: ""
   });
