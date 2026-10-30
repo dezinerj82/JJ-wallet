@@ -1,8 +1,8 @@
 // Private Drive storage. Uses only the user's temporary drive.file OAuth token.
-// Recognize the original app-created Bills folder by its marker after moves within Drive.
+// Recognize the original app-created Wallet bills folder by its marker after moves within Drive.
 // Do not create another folder if it is temporarily invisible after a move.
 const API = "https://www.googleapis.com/drive/v3/files";
-const FOLDER_NAME = "Bills";
+const FOLDER_NAME = "Wallet bills";
 const FOLDER_MIME = "application/vnd.google-apps.folder";
 const APP_MARKER = "home-wallet-records";
 
@@ -26,7 +26,8 @@ async function driveFetch(url, token, options = {}) {
 }
 
 export async function findBillsFolder(token) {
-  const q = `name = '${FOLDER_NAME}' and mimeType = '${FOLDER_MIME}' and trashed = false`;
+  // Match the app-owned folder by its stable marker, not a changeable name or parent.
+  const q = `mimeType = '${FOLDER_MIME}' and trashed = false and appProperties has { key='purpose' and value='${APP_MARKER}' }`;
   const folders = [];
   let pageToken = "";
   do {
@@ -40,13 +41,14 @@ export async function findBillsFolder(token) {
     folders.push(...(result.files || []));
     pageToken = result.nextPageToken || "";
   } while (pageToken);
-  // drive.file only lists files the app may access. Never guess by matching
-  // just the folder name, because an unrelated Bills folder may exist elsewhere.
-  return folders.find(folder => folder.appProperties?.purpose === APP_MARKER) || null;
+  // drive.file only lists files the app may access. Never guess from the name.
+  const owned = folders.filter(folder => folder.appProperties?.purpose === APP_MARKER);
+  if (owned.length > 1) throw new Error("Multiple wallet storage folders found. Review them before continuing.");
+  return owned[0] || null;
 }
 
 
-// TEST ONLY. Keeps all test text inside the private Bills folder.
+// TEST ONLY. Keeps all test text inside the private Wallet bills folder.
 // Appends lines by re-uploading the entire text file with its earlier contents intact.
 const TEST_FILE_NAME = "storage-check.txt";
 const TEST_MARKER = "wallet-storage-test";
@@ -142,7 +144,7 @@ async function updateTestFile(token, fileId, text) {
 }
 
 export async function testTextStorage(token, folderId) {
-  if (!token || !folderId) throw new Error("Connect to the private Bills folder first.");
+  if (!token || !folderId) throw new Error("Connect to the private Wallet bills folder first.");
   // Preserve any existing test text; never touch financial records.
   let file = await findTestFile(token, folderId);
   if (!file) {
