@@ -7,10 +7,12 @@ Consult application source files for current UI design and implementation.
 Keep README.md empty.
 
 GROUPS
-IN: recurring or manually entered spendable income items.
+Income (stored as IN for legacy compatibility): recurring or manually entered spendable income items.
 Saving: protected and accessible savings items.
 Bills: recurring, variable and periodic obligations.
 Others: custom payees or purchases, organised by item rather than subfolders.
+Custom categories: user-created expense groups, stored using their category label and counted as planned expenses.
+Withdraw: a savings action in the Add form, not an ordinary charge group.
 
 INCOME
 - Support repeating default values until manually changed.
@@ -23,6 +25,10 @@ SAVING
 - Transfer planned allocations from IN into savings during monthly payment processing.
 - Allocations are deducted from spendable income, and credited once to the relevant savings balance.
 - Protected savings permit allocations and balance tracking but NEVER withdrawals or bill funding.
+- All savings default to protected; the user must explicitly mark an existing savings item as accessible in Savings settings.
+- Withdraw appears in the category selector and shows a themed "Are you sure?" popup immediately upon selection.
+- Only accessible savings with verified confirmed balance may be withdrawn. Refuse zero, overdrafts, stale balances, and protected savings.
+- Confirmed withdrawals append a revised Savings TXT balance snapshot for the current month and never erase earlier lines.
 - Accessible savings permit explicit withdrawals only from already confirmed saved funds.
 - Future or uncommitted allocations must not be made available for withdrawals.
 - Carry the last confirmed savings balance into the next month.
@@ -82,6 +88,10 @@ WALLET ACCESS PROCESS
 
 MAIN VIEW
 - One month-based consolidated table with collapsible groups and item details.
+- Display the former IN group as Income while preserving existing IN TXT records.
+- Place custom categories beneath the fixed groups and include their entries in expense totals.
+- Item-name hover/focus displays private notes in a floating tooltip without exposing them publicly or altering the Remark column.
+- Use one rounded, theme-coloured dialog with Cancel and OK for Delete and Withdraw confirmations and service reminders; confirmations use the short wording "Are you sure?".
 - Keep the primary monthly table on the current month.
 - A separate Other months comparison view navigates earlier and future months independently without changing the primary table.
 - The comparison uses the same item data, group contents, details and valid Update actions; historical periods remain read-only.
@@ -97,7 +107,12 @@ MAIN VIEW
 - No charts.
 
 ADD / EDIT / REMOVE FORM
-- Category: choose an existing group/item or add a new item.
+- Category is a dropdown with existing groups, Withdraw, and Add new category.
+- Item is a dropdown filtered to the selected category, with Add new item for creating another item in that category.
+- Custom categories are valid user-named expense groups; do not allow custom names that conflict with reserved categories or commands.
+- The same item name may exist in different categories without mixing histories.
+- More options allows editing private hover notes and optional service dates/reminder settings; these are separate from user Remarks.
+- Savings settings permits an explicit access designation and private hover note but does not edit saved financial balances.
 - Date: select the current or a future payment month; allow typed dates converted to YYYYMM.
 - Amount: numeric MYR, without a currency prefix in the entry field.
 - Retail: shown only for Others.
@@ -108,7 +123,7 @@ ADD / EDIT / REMOVE FORM
 - Submit updates the corresponding item log and month table.
 - When updating an item, place Delete at the lower left, and Cancel then Update at the lower right.
 - Delete applies only to the selected open-month item, never to the entire per-item TXT file or other months.
-- Before deleting, ask for explicit confirmation. Cancellation must not write or change anything.
+- Before deleting, ask with the themed "Are you sure?" dialog. Cancellation must not write or change anything.
 - A confirmed Delete appends a four-field tombstone: MainCategory, Item, Month, DELETE.
 - A valid tombstone becomes the effective state for that item/month and hides it from the current and comparison month tables; earlier snapshots remain in the file.
 - Deleting an IN entry removes its contribution from that month's planned income. Deleting an unpaid Bills or Others entry removes its planned obligation for that month.
@@ -131,6 +146,14 @@ ADD / EDIT / REMOVE FORM
 - Incomplete submissions must not corrupt calculations; the precise safe representation is pending.
 - Amendments append revised log entries; historical lines remain preserved.
 - Do not edit completed previous months.
+
+PRIVATE SERVICE REMINDERS
+- The user may set a last-service month, a repeat interval and a reminder lead time for relevant items.
+- Based on the latest service month, remind after the scheduled advance period when the wallet is opened or refreshed while authenticated.
+- If a later recorded service is fully paid, use that month as the updated last-service reference where applicable.
+- Service reminders use the same rounded Cancel/OK popup styling as other confirmations.
+- Dismissed reminders are suppressed during the active page session, not silently marked as paid.
+- No background checks occur while the wallet is closed, and no calendar data is fetched by this feature.
 
 START PAYMENT
 - Start Payment loads the active month's planned income, allocations and payable obligations.
@@ -169,6 +192,9 @@ RECORDS / STORAGE
 - Saving fields: MainCategory, Item, Month, Added, Withdrawn, Balance.
 - Bills/Other fields: MainCategory, Item, Month, BillAmount, Paid, Unpaid.
 - Optional remark fields and Others retail/URL fields are compatible with legacy entries that lack these extras.
+- Private item settings are stored as append-only @META JSON directives inside the item's private TXT file; these directives are not money entries.
+- Only the latest valid @META for the same category and item is effective. Never write private notes, reminders, or financial amounts to public GitHub files.
+- A Savings @META access setting must be explicitly accessible before a withdrawal; the default is protected.
 - Recurring Bills metadata directives begin with @RECUR and are not financial rows; only valid Bills rules affect automatic month creation.
 - Append all changes instead of erasing past records.
 - The LAST valid row, including a valid DELETE marker, for a specific item/month is the effective state for that month.
