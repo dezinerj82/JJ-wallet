@@ -4,6 +4,7 @@ import {
 } from "./recurring.js";
 import { isWalletGroup } from "./groups.js";
 import { buildMeta, metaLine, lastMeta } from "./private-meta.js";
+import { paymentLine, parsePaymentLine, effectiveUnpaid } from "./settlement.js";
 import {
   itemMarkerLine, parseItemMarker, parseScheduleLine, validateSetupPayload,
   scheduleLine, lastSchedule, scheduledMonthsDue, scheduledRecordLine
@@ -1087,4 +1088,90 @@ export async function renewScheduledItems(token, folderId, contents) {
     changed = true;
   }
   return changed;
+}
+
+
+// Record payments against the original obligation, including a bill carried
+// from an earlier month. The private history is append-only and verified.
+export async function recordBillPayment(token, folderId, previous, rawAmount) {
+  if (!token || !folderId) throw new Error("Sign in again.");
+  const group = previous?.group;
+  const item = previous?.item;
+  const month = previous?.carryOver ? previous.carryFrom : previous?.month;
+  if (!isWalletGroup(group) || group === "IN" || group === "Saving" ||
+      typeof item !== "string" || !item || item.length > 120 ||
+      /[\t\r\n\x00-\x1f]/.test(item) ||
+      !/^(?:19|20|21)\d{2}(?:0[1-9]|1[0-2])$/.test(month) ||
+      !/^(?:0|[1-9]\d{0,11})(?:\.\d{1,2})?$/.test(String(rawAmount))) {
+    throw new Error("Invalid payment.");
+  }
+  const amount = Number(rawAmount);
+  if (!Number.isSafeInteger(Math.round(amount*100)) || amount <= 0) {
+    throw new Error("Enter a payment amount.");
+  }
+  const today = new Date();
+  const current = String(today.getFullYear()) +
+    String(today.getMonth()+1).padStart(2,"0");
+  if (month > current || (!previous.carryOver && month !== current)) {
+    throw new Error("Pay only in the current month.");
+  }
+  const existing = await findOneItemFile(token,folderId,group,item);
+  if (existing.file.appProperties?.purpose !== ITEM_MARKER) {
+    throw new Error("Payment file needs review.");
+  }
+  const last = lastMonthSnapshot(existing.text,group,item,month);
+  if (!last || last.length < 6 || last[3] === "DELETE") {
+    throw new Error("Item changed. Press Refresh.");
+  }
+  const dueCents = Math.round(Number(last[5])*100);
+  const paidCents = Math.round(Number(last[4])*100);
+  const totalCents = Math.round(Number(last[3])*100);
+  if (![dueCents,paidCents,totalCents].every(Number.isSafeInteger) ||
+      dueCents < 0 || paidCents < 0 || dueCents+paidCents !== totalCents) {
+    throw new Error("Payment history needs review.");
+  }
+  let expected;
+  const paymentCents = Math.round(amount*100);
+  if (previous.carryOver) {
+    if (month >= current) throw new Error("Not an overdue item.");
+    let settled = 0;
+    for (const line of existing.text.split("\n")) {
+      const p = parsePaymentLine(line);
+      if (p && p.group === group &&
+          p.item.toLocaleLowerCase("en") === item.toLocaleLowerCase("en") &&
+          p.originMonth === month && p.paidMonth <= current) {
+        settled += Math.round(p.amount*100);
+        if (!Number.isSafeInteger(settled)) throw new Error("Payment total is too large.");
+      }
+    }
+    const remain = dueCents - settled;
+    if (remain <= 0 || paymentCents > remain ||
+        remain !== Math.round(Number(previous.unpaid)*100)) {
+      throw new Error("Amount changed. Press Refresh.");
+    }
+    const addition = paymentLine({
+      group,item,originMonth:month,paidMonth:current,amount
+    });
+    expected = existing.text +
+      (existing.text && !existing.text.endsWith("\n") ? "\n" : "") + addition;
+  } else {
+    if (!matchesDisplayedSnapshot(last,previous) ||
+        paymentCents > dueCents) {
+      throw new Error("Amount changed. Press Refresh.");
+    }
+    const fields = [...last];
+    fields[4] = ((paidCents+paymentCents)/100).toFixed(2);
+    fields[5] = ((dueCents-paymentCents)/100).toFixed(2);
+    expected = existing.text +
+      (existing.text && !existing.text.endsWith("\n") ? "\n" : "") +
+      fields.join("\t") + "\n";
+  }
+  if (new Blob([expected]).size > WRITE_LIMIT) {
+    throw new Error("Item history is full.");
+  }
+  await replaceWalletText(token,existing.file.id,expected);
+  if (await getFileText(token,existing.file.id) !== expected) {
+    throw new Error("Couldn't verify payment. Press Refresh.");
+  }
+  return { group,item,month:current };
 }
