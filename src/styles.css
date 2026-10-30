@@ -1,7 +1,7 @@
 /* Home wallet — Google Sans family, calm table, colour-coded group pills. */
 :root {
   color-scheme: light;
-  font-family: "Google Sans Flex", "Google Sans", sans-serif;
+  font-family: "Google Sans", sans-serif;
   --stormy-teal: #006d77;
   --pearl-aqua: #83c5be;
   --alice-blue: #edf6f9;
@@ -36,7 +36,7 @@ h1 {
   font-family: inherit;
   font-size: clamp(2.7rem, 6.5vw, 4rem);
   line-height: 1.08;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: -.04em;
 }
 .brand-home { color: var(--stormy-teal); }
@@ -145,7 +145,7 @@ select:focus-visible {
   color: var(--stormy-teal);
   font-size: clamp(1.45rem, 3.5vw, 1.8rem);
   line-height: 1.2;
-  font-weight: 750;
+  font-weight: 700;
   box-shadow: 0 3px 8px rgba(0, 71, 78, .08);
 }
 .wallet-actions {
