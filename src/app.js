@@ -742,6 +742,7 @@ function populateItemChoices(previous = "") {
 function syncItemChoice() {
   if (editingEntry) {
     addItemSelectField.hidden = true;
+    addItemSelect.required = false;
     addNameField.hidden = false;
     addName.required = true;
     return;
