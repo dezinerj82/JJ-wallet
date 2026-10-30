@@ -71,6 +71,10 @@ MAIN VIEW
 - A separate Other months comparison view navigates earlier and future months independently without changing the primary table.
 - The comparison uses the same item data, group contents, details and valid Update actions; historical periods remain read-only.
 - New or amended records refresh both views from the same confirmed storage data.
+- Monetary amounts are entered, recorded and calculated in MYR; switching the table's display currency must never alter underlying records.
+- Both monthly tables share a display choice between RM and Korean won.
+- Korean won display uses the latest available published conversion rate, shows its date and source, and always rounds positive converted amounts upwards to the next whole hundred won.
+- Conversion errors or unavailable rates must be clearly indicated; never show fabricated or hard-coded rates or treat estimates as payment values.
 - Display income, planned dues, protected/accessible saved balances and alerts.
 - Maintain a separate live list of outstanding Others items.
 - Work cleanly on mobile and desktop browsers.
