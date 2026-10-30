@@ -48,6 +48,7 @@ const monthLabel = document.getElementById("month-label");
 const otherMonthsButton = document.getElementById("other-months-button");
 const otherMonthsWindow = document.getElementById("other-months-window");
 const otherMonthsDragHandle = document.getElementById("other-months-drag-handle");
+const otherMonthsResizeHandle = document.getElementById("other-months-resize-handle");
 const otherMonthsClose = document.getElementById("other-months-close");
 const otherMonthsPrev = document.getElementById("other-months-prev");
 const otherMonthsNext = document.getElementById("other-months-next");
@@ -388,7 +389,6 @@ function renderComparisonMonth() {
 function closeOtherMonths(restoreFocus = true) {
   const wasOpen = !otherMonthsWindow.hidden;
   otherMonthsWindow.hidden = true;
-  document.body.classList.remove("other-months-open");
   otherMonthsButton.setAttribute("aria-expanded", "false");
   otherMonthsBody.replaceChildren();
   if (restoreFocus && wasOpen) otherMonthsButton.focus();
@@ -407,7 +407,8 @@ function openOtherMonths() {
   otherMonthsWindow.style.top = "";
   otherMonthsWindow.style.right = "";
   otherMonthsWindow.hidden = false;
-  document.body.classList.add("other-months-open");
+  const initialPosition = otherMonthsWindow.getBoundingClientRect();
+  moveOtherMonthsTo(initialPosition.left, initialPosition.top);
   otherMonthsButton.setAttribute("aria-expanded", "true");
   renderComparisonMonth();
   otherMonthsClose.focus({ preventScroll: true });
@@ -654,6 +655,66 @@ function moveOtherMonthsTo(left, top) {
   otherMonthsWindow.style.top = Math.min(Math.max(8, top), maxTop) + "px";
   otherMonthsWindow.style.right = "auto";
 }
+// Resize the floating window independently of the page, with its table
+// flowing in the available width via CSS container queries.
+function resizeOtherMonthsTo(width, height) {
+  const maxWidth = Math.max(0, window.innerWidth - 16);
+  const maxHeight = Math.max(0, window.innerHeight - 16);
+  const minWidth = Math.min(288, maxWidth);
+  const minHeight = Math.min(240, maxHeight);
+  const newWidth = Math.max(minWidth, Math.min(width, maxWidth));
+  const newHeight = Math.max(minHeight, Math.min(height, maxHeight));
+  const position = otherMonthsWindow.getBoundingClientRect();
+
+  otherMonthsWindow.style.width = newWidth + "px";
+  otherMonthsWindow.style.height = newHeight + "px";
+  moveOtherMonthsTo(
+    Math.min(position.left, Math.max(8, window.innerWidth - newWidth - 8)),
+    Math.min(position.top, Math.max(8, window.innerHeight - newHeight - 8))
+  );
+}
+
+let resizingOtherMonths = null;
+otherMonthsResizeHandle.addEventListener("pointerdown", event => {
+  if (event.button !== 0 || otherMonthsWindow.hidden) return;
+  const rect = otherMonthsWindow.getBoundingClientRect();
+  resizingOtherMonths = {
+    pointerId: event.pointerId,
+    x: event.clientX,
+    y: event.clientY,
+    width: rect.width,
+    height: rect.height
+  };
+  otherMonthsResizeHandle.setPointerCapture(event.pointerId);
+  event.preventDefault();
+});
+otherMonthsResizeHandle.addEventListener("pointermove", event => {
+  if (!resizingOtherMonths || event.pointerId !== resizingOtherMonths.pointerId) return;
+  resizeOtherMonthsTo(
+    resizingOtherMonths.width + event.clientX - resizingOtherMonths.x,
+    resizingOtherMonths.height + event.clientY - resizingOtherMonths.y
+  );
+});
+function stopOtherMonthsResize(event) {
+  if (resizingOtherMonths?.pointerId === event.pointerId) resizingOtherMonths = null;
+}
+otherMonthsResizeHandle.addEventListener("pointerup", stopOtherMonthsResize);
+otherMonthsResizeHandle.addEventListener("pointercancel", stopOtherMonthsResize);
+otherMonthsResizeHandle.addEventListener("keydown", event => {
+  const step = event.shiftKey ? 50 : 20;
+  const sizes = {
+    ArrowLeft: [-step, 0],
+    ArrowRight: [step, 0],
+    ArrowUp: [0, -step],
+    ArrowDown: [0, step]
+  };
+  const delta = sizes[event.key];
+  if (!delta || otherMonthsWindow.hidden) return;
+  const rect = otherMonthsWindow.getBoundingClientRect();
+  resizeOtherMonthsTo(rect.width + delta[0], rect.height + delta[1]);
+  event.preventDefault();
+});
+
 let draggingOtherMonths = null;
 otherMonthsDragHandle.addEventListener("keydown", event => {
   if (event.target !== otherMonthsDragHandle || otherMonthsWindow.hidden) return;
@@ -692,9 +753,9 @@ function stopOtherMonthsDrag(event) {
 otherMonthsDragHandle.addEventListener("pointerup", stopOtherMonthsDrag);
 otherMonthsDragHandle.addEventListener("pointercancel", stopOtherMonthsDrag);
 window.addEventListener("resize", () => {
-  if (otherMonthsWindow.hidden || !otherMonthsWindow.style.left) return;
+  if (otherMonthsWindow.hidden) return;
   const rect = otherMonthsWindow.getBoundingClientRect();
-  moveOtherMonthsTo(rect.left, rect.top);
+  resizeOtherMonthsTo(rect.width, rect.height);
 });
 
 refreshButton.addEventListener("click", () => {
