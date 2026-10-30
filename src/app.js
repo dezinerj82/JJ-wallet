@@ -2,7 +2,7 @@ import { initialiseGoogleLogin, restoreLoginSession, signIn, signOut, getDriveTo
 import { findBillsFolder, readWalletTextFiles, addWalletItem, updateWalletItem, deleteWalletItem, renewRecurringBills, saveSavingSettings, withdrawSavingItem } from "./drive.js";
 import { getMyrKrwRate, formatWalletCurrency, rateDateLabel } from "./currency.js";
 import { displayGroup, availableGroups, isCustomGroup, NEW_CATEGORY, NEW_ITEM } from "./groups.js";
-import { buildMeta, parseAllMetadata, serviceReminders, metaKey } from "./private-meta.js";
+import { buildMeta, parseAllMetadata, serviceReminders, effectiveServiceMonth, metaKey } from "./private-meta.js";
 import {
   WALLET_GROUPS, parseWalletFiles, entriesForMonth, calculateMonthlyBalance,
   monthKey, shiftedMonthKey, formatMonth
@@ -348,11 +348,93 @@ function addTextCell(row, text, className) {
 }
 
 // The main and movable comparison tables share exactly the same row renderer.
+function confirmWallet(message = "Are you sure?") {
+  if (walletDialog.open) return Promise.resolve(false);
+  walletDialogText.textContent = message;
+  return new Promise(resolve => {
+    const ok = () => walletDialog.close("ok");
+    const cancel = () => walletDialog.close("cancel");
+    const finish = () => {
+      walletDialogOk.removeEventListener("click", ok);
+      walletDialogCancel.removeEventListener("click", cancel);
+      walletDialog.removeEventListener("close", finish);
+      resolve(walletDialog.returnValue === "ok");
+    };
+    walletDialogOk.addEventListener("click", ok);
+    walletDialogCancel.addEventListener("click", cancel);
+    walletDialog.addEventListener("close", finish);
+    walletDialog.showModal();
+    walletDialogOk.focus();
+  });
+}
+
+function hideItemTooltip() {
+  hoverTooltip.hidden = true;
+}
+
+function showItemTooltip(target, text) {
+  if (!text) return;
+  hoverTooltip.textContent = text;
+  hoverTooltip.hidden = false;
+  const rect = target.getBoundingClientRect();
+  const width = hoverTooltip.getBoundingClientRect().width;
+  const height = hoverTooltip.getBoundingClientRect().height;
+  const left = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8));
+  const top = rect.top >= height + 14
+    ? rect.top - height - 8
+    : Math.min(window.innerHeight - height - 8, rect.bottom + 8);
+  hoverTooltip.style.left = left + "px";
+  hoverTooltip.style.top = Math.max(8, top) + "px";
+}
+
+function tooltipText(entry) {
+  const meta = entry.meta;
+  if (!meta) return "";
+  const lines = [];
+  if (meta.note.trim()) lines.push(meta.note.trim());
+  if (meta.lastService) {
+    const effective = effectiveServiceMonth(meta, walletEntries);
+    lines.push("Last service : " + formatMonth(effective));
+  }
+  return lines.join("\n\n");
+}
+
+function addItemNameCell(row, entry) {
+  const cell = document.createElement("td");
+  cell.className = "wallet-item";
+  const label = document.createElement("span");
+  label.textContent = entry.item;
+  const note = tooltipText(entry);
+  if (note) {
+    label.className = "wallet-item-note";
+    label.tabIndex = 0;
+    label.setAttribute("aria-label", entry.item + ". " + note.replace(/\n/g, " "));
+    label.addEventListener("pointerenter", () => showItemTooltip(label, note));
+    label.addEventListener("pointerleave", hideItemTooltip);
+    label.addEventListener("focus", () => showItemTooltip(label, note));
+    label.addEventListener("blur", hideItemTooltip);
+  }
+  cell.append(label);
+  row.append(cell);
+}
+
+async function showDueServiceReminders() {
+  if (!activeFolderId || !getDriveToken() || walletDialog.open) return;
+  const upcoming = serviceReminders(walletMetadata, walletEntries);
+  for (const reminder of upcoming) {
+    if (!activeFolderId || !getDriveToken()) return;
+    const key = metaKey(reminder.group, reminder.item) + ":" + reminder.dueMonth;
+    if (reminderSeen.has(key)) continue;
+    reminderSeen.add(key);
+    await confirmWallet(reminder.item + " · Service due " + formatMonth(reminder.dueMonth));
+  }
+}
+
 function renderTable(month, target, groupStates, fromComparison = false) {
   const groups = entriesForMonth(walletEntries, month);
   const rows = document.createDocumentFragment();
 
-  for (const group of WALLET_GROUPS) {
+  for (const group of availableGroups(walletEntries)) {
     const entries = groups[group];
     const expanded = groupStates.get(group) !== false;
     const headingRow = document.createElement("tr");
@@ -363,10 +445,11 @@ function renderTable(month, target, groupStates, fromComparison = false) {
 
     const button = document.createElement("button");
     button.type = "button";
-    button.className = "group-toggle group-" + group.toLowerCase();
+    button.className = "group-toggle group-" +
+      (isCustomGroup(group) ? "custom" : group.toLowerCase());
     button.setAttribute("aria-expanded", String(expanded));
     button.setAttribute("aria-label", (expanded ? "Collapse " : "Expand ") + group);
-    button.textContent = group;
+    button.textContent = displayGroup(group);
     button.addEventListener("click", () => {
       groupStates.set(group, !expanded);
       renderTable(month, target, groupStates, fromComparison);
@@ -390,7 +473,7 @@ function renderTable(month, target, groupStates, fromComparison = false) {
 
     for (const entry of entries) {
       const row = document.createElement("tr");
-      addTextCell(row, entry.item, "wallet-item");
+      addItemNameCell(row, entry);
       addTextCell(row, formatWalletCurrency(
         entry.group === "Saving" ? entry.balance : entry.amount,
         fromComparison ? displayCurrencies.other : displayCurrencies.main,
@@ -404,10 +487,11 @@ function renderTable(month, target, groupStates, fromComparison = false) {
       editButton.type = "button";
       editButton.className = "update-item-button";
       editButton.setAttribute("aria-label", "Update " + entry.item);
-      const editable = entry.group !== "Saving" && entry.month >= currentMonth;
+      const editable = entry.group === "Saving" || entry.month >= currentMonth;
       editButton.disabled = !editable;
-      editButton.title = editable ? "Update " + entry.item :
-        "Past months and savings balances cannot be edited here";
+      editButton.title = editable
+        ? entry.group === "Saving" ? "Savings settings" : "Update " + entry.item
+        : "Past months can't be edited";
       const pencil = document.createElementNS("http://www.w3.org/2000/svg", "svg");
       pencil.setAttribute("viewBox", "0 0 24 24");
       pencil.setAttribute("width", "16");
@@ -424,7 +508,8 @@ function renderTable(month, target, groupStates, fromComparison = false) {
       editButton.append(pencil);
       if (editable) {
         editButton.addEventListener("click", () => {
-          openUpdateForm(entry);
+          if (entry.group === "Saving") openSavingSettings(entry);
+          else openUpdateForm(entry);
           if (fromComparison) {
             addPanel.scrollIntoView({ behavior: "smooth", block: "start" });
           }
