@@ -2,6 +2,7 @@ import { parseRecurringDirective } from "./recurring.js";
 import { WALLET_GROUPS, isWalletGroup, isExpenseGroup, availableGroups } from "./groups.js";
 import { parseMetaLine, metaKey } from "./private-meta.js";
 import { parseItemMarker, parseScheduleLine } from "./setup.js";
+import { parsePaymentLine, effectiveUnpaid, CARRY_START_MONTH } from "./settlement.js";
 
 // Pure read-only wallet record parsing. No financial records are stored in GitHub.
 // Item TXT lines are tab-separated. Last valid entry for an item/month wins.
@@ -70,6 +71,7 @@ export function parseWalletFiles(files) {
   const metadata = new Map();
   const directory = new Map();
   const schedules = new Map();
+  const payments = new Map();
   let validLines = 0;
   let invalidLines = 0;
 
@@ -81,6 +83,18 @@ export function parseWalletFiles(files) {
 
     for (const line of file.content.split("\n")) {
       if (!line.trim()) continue;
+      if (line.startsWith("@PAY\t")) {
+        const event = parsePaymentLine(line);
+        if (event) {
+          const key = JSON.stringify([
+            event.group, event.item.toLocaleLowerCase("en"), event.originMonth
+          ]);
+          if (!payments.has(key)) payments.set(key, []);
+          payments.get(key).push(event);
+          validLines++;
+        } else invalidLines++;
+        continue;
+      }
       if (line.startsWith("@ITEM\t")) {
         const found = parseItemMarker(line);
         if (found) {
@@ -151,7 +165,10 @@ export function parseWalletFiles(files) {
       ...(entry.group === "Bills"
         ? { recurring: repeatRules.get(entry.item.toLocaleLowerCase("en")) === true } : {}),
       scheduled: schedules.get(metaKey(entry.group, entry.item))?.active === true,
-      meta: metadata.get(metaKey(entry.group, entry.item)) || null
+      meta: metadata.get(metaKey(entry.group, entry.item)) || null,
+      settlements: payments.get(JSON.stringify([
+        entry.group, entry.item.toLocaleLowerCase("en"), entry.month
+      ])) || []
     })),
     catalog: [...directory.values()],
     schedules: [...schedules.values()],
@@ -177,6 +194,20 @@ export function entriesForMonth(allEntries, month) {
   }
 
   groups.Saving = [...latestSavings.values()];
+  // Older unpaid obligations follow into later months as views, not TXT rows.
+  if (month >= CARRY_START_MONTH) {
+    for (const entry of allEntries) {
+      if (!isExpenseGroup(entry.group) || entry.month >= month ||
+          entry.month < CARRY_START_MONTH || !groups[entry.group]) continue;
+      const amount = effectiveUnpaid(entry, month);
+      if (amount <= 0) continue;
+      groups[entry.group].push({
+        ...entry, month, carryOver: true, carryFrom: entry.month,
+        amount, paid: 0, unpaid: amount,
+        remark: "From " + formatMonth(entry.month)
+      });
+    }
+  }
   for (const group of groupList) {
     groups[group].sort((a, b) => a.item.localeCompare(b.item));
   }
@@ -302,6 +333,18 @@ export function calculateMonthlyPlan(allEntries, month) {
 
 export function calculateMonthlyBalance(allEntries, month) {
   return calculateMonthlyPlan(allEntries, month).balance;
+}
+
+export function calculateUnpaidForMonth(allEntries, month) {
+  const groups = entriesForMonth(allEntries, month);
+  let cents = 0;
+  for (const group of availableGroups(allEntries).filter(isExpenseGroup)) {
+    for (const item of groups[group]) {
+      cents += Math.round(effectiveUnpaid(item,month)*100);
+      if (!Number.isSafeInteger(cents)) throw new Error("Unpaid total is too large.");
+    }
+  }
+  return cents/100;
 }
 
 export function monthKey(date) {
