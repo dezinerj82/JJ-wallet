@@ -147,3 +147,61 @@ summary:focus-visible { outline: 3px solid var(--tangerine-dream); outline-offse
 @media (prefers-reduced-motion: reduce) {
   button { transition: none; }
 }
+
+/* Item entry form; no items are created until the user submits. */
+#add-item-button { background: var(--stormy-teal); color: var(--paper); }
+#add-item-button:hover:not(:disabled) { background: #005860; }
+.empty-row td {
+  color: #416c70;
+  padding: 0.9rem 1.25rem;
+  font-style: italic;
+  background: var(--paper);
+}
+.add-item-panel {
+  margin: 1.1rem 0;
+  padding: 1.1rem;
+  background: var(--alice-blue);
+  border: 1px solid var(--pearl-aqua);
+  border-radius: 16px;
+  box-shadow: var(--soft-shadow);
+}
+.add-item-panel h3 { font-size: 1.1rem; margin: 0 0 0.8rem; }
+.add-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+.add-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+.add-grid input, .add-grid select {
+  width: 100%;
+  min-height: 2.8rem;
+  border: 1px solid var(--pearl-aqua);
+  border-radius: 10px;
+  padding: 0.65rem 0.7rem;
+  background: var(--paper);
+  color: var(--stormy-teal);
+  font: inherit;
+  font-weight: 500;
+}
+.add-grid input:focus-visible, .add-grid select:focus-visible {
+  outline: 3px solid var(--tangerine-dream);
+  outline-offset: 2px;
+}
+.form-status { color: #993e2b; font-size: 0.9rem; min-height: 1rem; }
+.form-actions { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+#submit-item-button { color: var(--paper); background: var(--stormy-teal); }
+#submit-item-button:hover:not(:disabled) { background: #005860; }
+#cancel-item-button { background: var(--almond-silk); }
+#cancel-item-button:hover:not(:disabled) { background: var(--tangerine-dream); }
+
+@media (max-width: 540px) {
+  .add-grid { grid-template-columns: minmax(0, 1fr); }
+  .wallet-actions { gap: 0.4rem; }
+  .wallet-actions button { padding: 0.65rem 0.8rem; }
+}
