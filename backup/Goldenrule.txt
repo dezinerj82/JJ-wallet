@@ -91,6 +91,15 @@ ADD / EDIT / REMOVE FORM
 - Submit and Cancel must both be available even when fields are empty.
 - Cancel returns to the prior screen, with no save.
 - Submit updates the corresponding item log and month table.
+- When updating an item, place Delete at the lower left, and Cancel then Update at the lower right.
+- Delete applies only to the selected open-month item, never to the entire per-item TXT file or other months.
+- Before deleting, ask for explicit confirmation. Cancellation must not write or change anything.
+- A confirmed Delete appends a four-field tombstone: MainCategory, Item, Month, DELETE.
+- A valid tombstone becomes the effective state for that item/month and hides it from the current and comparison month tables; earlier snapshots remain in the file.
+- Deleting an IN entry removes its contribution from that month's planned income. Deleting an unpaid Bills or Others entry removes its planned obligation for that month.
+- Bills/Others entries with any recorded paid amount cannot be deleted; paid history and confirmed savings are never cleared via ordinary Delete.
+- Re-adding a deleted item in the same month appends a fresh item snapshot, restoring it without removing the old history.
+- Forecasts and outstanding totals, when enabled, use only the latest effective non-deleted item/month state; future-month records are not changed by a deletion.
 - Empty groups display a simple No items row instead of looking broken.
 - Add may create IN, Bills and Others entries for the current or future months, only after explicit submission; for existing items it may append a new month while preserving historical lines.
 - A second Add for the same item/month is refused; use Update to amend the existing month instead.
@@ -146,7 +155,7 @@ RECORDS / STORAGE
 - Bills/Other fields: MainCategory, Item, Month, BillAmount, Paid, Unpaid.
 - Optional remark fields and Others retail/URL fields are compatible with legacy entries that lack these extras.
 - Append all changes instead of erasing past records.
-- The LAST valid row for a specific item/month is the effective state for that month.
+- The LAST valid row, including a valid DELETE marker, for a specific item/month is the effective state for that month.
 - A later version of an existing record is not a second charge.
 - Additional charges for an Others item must be represented as a revised cumulative amount or explicitly identified new charge events, not as accidental double-counted snapshots.
 - Keep explicit zero-activity month records where needed to identify gaps.
@@ -162,7 +171,7 @@ SHAREABLE OUTSTANDING SUMMARY
 
 PROCESS RULES PENDING DESIGN
 - The detailed Start Payment review and human-error checks.
-- Safe blank/incomplete record handling and deletion marker semantics.
+- Safe blank/incomplete record handling beyond the implemented DELETE marker.
 - Export format.
 - File segmentation and partial-write recovery behavior.
 
