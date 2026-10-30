@@ -146,41 +146,102 @@ export function entriesForMonth(allEntries, month) {
   return groups;
 }
 
-// Monthly planning estimate, not an actual bank balance.
-// A = this month's IN; B = this month's Bills + Others + this month's
-// recorded savings additions. Carry-forward amounts will be included when
-// that separate workflow is implemented; never assume unrecorded carry.
-export function calculateMonthlyBalance(allEntries, month) {
+// Savings targets are plans, never recorded deposits. Bills and already saved
+// amounts remain untouched. Reduce only still-uncommitted monthly targets.
+export function calculateMonthlyPlan(allEntries, month) {
   const groups = entriesForMonth(allEntries, month);
-  const sumCents = (items, field) => items.reduce((sum, item) => {
-    const amount = item[field];
-    if (!Number.isFinite(amount) || amount < 0) {
-      throw new Error("Could not calculate the monthly balance.");
+  function cents(value) {
+    if (!Number.isFinite(value) || value < 0 ||
+        !Number.isSafeInteger(Math.round(value * 100))) {
+      throw new Error("Invalid wallet amount.");
     }
-    const cents = Math.round(amount * 100);
-    if (!Number.isSafeInteger(cents) || !Number.isSafeInteger(sum + cents)) {
-      throw new Error("The monthly amount is too large to calculate safely.");
-    }
-    return sum + cents;
-  }, 0);
-
-  const income = sumCents(groups.IN, "amount");
-  const bills = sumCents(groups.Bills, "amount");
-  const others = sumCents(groups.Others, "amount");
-  const custom = availableGroups(allEntries).filter(isExpenseGroup)
-    .filter(group => group !== "Bills" && group !== "Others")
-    .reduce((total, group) => total + sumCents(groups[group], "amount"), 0);
-  if (!Number.isSafeInteger(custom)) throw new Error("Balance exceeds the safe limit.");
-  // entriesForMonth carries the last savings balance forward for display.
-  // Never count that balance or historical additions as this month's cost.
-  const currentSavings = groups.Saving.filter(entry => entry.month === month);
-  const saving = sumCents(currentSavings, "added");
-  const totalExpenses = bills + others + saving + custom;
-  if (!Number.isSafeInteger(totalExpenses) ||
-      !Number.isSafeInteger(income - totalExpenses)) {
-    throw new Error("The monthly balance could not be calculated safely.");
+    return Math.round(value * 100);
   }
-  return (income - totalExpenses) / 100;
+  function sum(items, field) {
+    return items.reduce((total, item) => {
+      const next = total + cents(item[field]);
+      if (!Number.isSafeInteger(next)) throw new Error("Monthly total is too large.");
+      return next;
+    }, 0);
+  }
+
+  const income = sum(groups.IN, "amount");
+  const expenses = availableGroups(allEntries)
+    .filter(isExpenseGroup)
+    .reduce((total, group) => {
+      const next = total + sum(groups[group], "amount");
+      if (!Number.isSafeInteger(next)) throw new Error("Monthly total is too large.");
+      return next;
+    }, 0);
+  const committedSavings = sum(groups.Saving.filter(e => e.month === month), "added");
+
+  // A current-month savings snapshot already exists in the private ledger.
+  // Treat it as committed and never overwrite or plan a second allocation.
+  const targets = groups.Saving
+    .filter(e => e.month !== month && (e.meta?.monthlySaving || 0) > 0)
+    .map(e => ({ item: e.item, targetCents: cents(e.meta.monthlySaving) }))
+    .sort((a, b) => a.item.localeCompare(b.item));
+  let requested = 0;
+  for (const target of targets) {
+    requested += target.targetCents;
+    if (!Number.isSafeInteger(requested)) throw new Error("Savings plan is too large.");
+  }
+
+  const available = Math.max(0, income - expenses - committedSavings);
+  const budget = Math.min(available, requested);
+  const savingPlans = new Map();
+  if (requested > 0) {
+    // Exact integer-cent pro-rata allocation, with deterministic remainder
+    // distribution; total allocations never exceed the available income.
+    const parts = targets.map(target => {
+      const numerator = BigInt(target.targetCents) * BigInt(budget);
+      const denominator = BigInt(requested);
+      return {
+        ...target,
+        allocated: Number(numerator / denominator),
+        remainder: numerator % denominator
+      };
+    });
+    const used = parts.reduce((total, part) => total + part.allocated, 0);
+    let leftovers = budget - used;
+    const byRemainder = [...parts].sort((a, b) =>
+      a.remainder === b.remainder
+        ? a.item.localeCompare(b.item)
+        : a.remainder > b.remainder ? -1 : 1
+    );
+    for (const part of byRemainder) {
+      if (leftovers <= 0) break;
+      part.allocated += 1;
+      leftovers--;
+    }
+    for (const part of parts) {
+      savingPlans.set(part.item, {
+        requested: part.targetCents / 100,
+        amount: part.allocated / 100,
+        adjusted: part.allocated < part.targetCents
+      });
+    }
+  }
+
+  const remainingCents = income - expenses - committedSavings - budget;
+  if (!Number.isSafeInteger(remainingCents)) {
+    throw new Error("Monthly balance is too large.");
+  }
+  return {
+    income: income / 100,
+    expenses: expenses / 100,
+    committedSavings: committedSavings / 100,
+    requestedSavings: requested / 100,
+    plannedSavings: budget / 100,
+    balance: remainingCents / 100,
+    savingPlans,
+    savingsAdjusted: budget < requested,
+    insufficientForBills: income < expenses + committedSavings
+  };
+}
+
+export function calculateMonthlyBalance(allEntries, month) {
+  return calculateMonthlyPlan(allEntries, month).balance;
 }
 
 export function monthKey(date) {
