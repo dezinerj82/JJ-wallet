@@ -103,7 +103,7 @@ USE SAVINGS
 - After a confirmed save, append a withdrawal record and update the savings balance.
 
 RECORDS / STORAGE
-- Single private storage folder named bills.
+- Single private storage folder named Bills.
 - One plain UTF-8 .txt file per unique item, containing all applicable months.
 - No category subfolders and no separate file for each month.
 - Text lines are tab-separated, with YYYYMM month values.
