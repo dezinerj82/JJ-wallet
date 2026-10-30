@@ -6,7 +6,7 @@ import { buildMeta, parseAllMetadata, serviceReminders, effectiveServiceMonth, m
 import { plannedAlerts, validateSetupPayload } from "./setup.js";
 import {
   WALLET_GROUPS, parseWalletFiles, entriesForMonth, calculateMonthlyPlan,
-  monthKey, shiftedMonthKey, formatMonth
+  monthKey, shiftedMonthKey, formatMonth, formatAmount
 } from "./records.js";
 
 const TRUST_KEY = "home-wallet-remember-browser-v1";
@@ -661,8 +661,11 @@ async function loadWalletRecords(message = "Refreshing your items...") {
       const changed = await renewRecurringBills(getDriveToken(), folderId, files);
       if (version !== connectionVersion || !getDriveToken()) return;
       if (changed) files = await readWalletTextFiles(getDriveToken(), folderId);
+      const scheduled = await renewScheduledItems(getDriveToken(), folderId, files);
+      if (version !== connectionVersion || !getDriveToken()) return;
+      if (scheduled) files = await readWalletTextFiles(getDriveToken(), folderId);
     } catch {
-      recurringError = "Couldn't add recurring bills. Press Refresh.";
+      recurringError = "Couldn't update scheduled items. Press Refresh.";
       // Earlier files may have been saved before another one failed.
       files = await readWalletTextFiles(getDriveToken(), folderId);
     }
