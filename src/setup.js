@@ -146,8 +146,10 @@ export function plannedAlerts(rules, now = new Date()) {
     if (rule.alerts) for(const alert of rule.alerts) {
       if (alert.month === now.getMonth()+1 && alert.day === day &&
           String(now.getFullYear()) + String(alert.month).padStart(2,"0") >= rule.start) {
-        results.push({ id: rule.group+"|"+rule.item+"|"+now.getFullYear()+"|"+alert.month+"|"+alert.day,
-          text: alert.text });
+        results.push({
+          id: rule.group+"|"+rule.item+"|"+now.getFullYear()+"|"+alert.month+"|"+alert.day,
+          group: rule.group, item: rule.item, text: alert.text
+        });
       }
     }
     if (!rule.remindBefore) continue;
@@ -157,6 +159,7 @@ export function plannedAlerts(rules, now = new Date()) {
       String(lookahead.getMonth()+1).padStart(2,"0");
     if (scheduleApplies(rule,next) && scheduleAmount(rule,next)>0) {
       results.push({ id: rule.group+"|"+rule.item+"|"+next,
+        group: rule.group, item: rule.item,
         text: rule.item+" · Due "+new Intl.DateTimeFormat("en-MY",{month:"long",year:"numeric"}).format(lookahead) });
     }
   }
