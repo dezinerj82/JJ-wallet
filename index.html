@@ -143,6 +143,9 @@
         <form id="saving-settings-form">
           <p id="saving-settings-name"></p>
           <label class="setting-check"><input type="checkbox" id="saving-accessible"> Allow withdrawals</label>
+          <label class="setting-note">Monthly saving (RM)
+            <input id="saving-monthly-target" type="number" min="0" step="0.01" inputmode="decimal" required>
+          </label>
           <label class="setting-note">Hover note
             <textarea id="saving-hover-note" maxlength="1600" rows="3"></textarea>
           </label>
