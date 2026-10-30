@@ -1,6 +1,8 @@
 import { initialiseGoogleLogin, restoreLoginSession, signIn, signOut, getDriveToken } from "./auth.js";
-import { findBillsFolder, readWalletTextFiles, addWalletItem, updateWalletItem, deleteWalletItem, renewRecurringBills } from "./drive.js";
+import { findBillsFolder, readWalletTextFiles, addWalletItem, updateWalletItem, deleteWalletItem, renewRecurringBills, saveSavingSettings, withdrawSavingItem } from "./drive.js";
 import { getMyrKrwRate, formatWalletCurrency, rateDateLabel } from "./currency.js";
+import { displayGroup, availableGroups, isCustomGroup, NEW_CATEGORY, NEW_ITEM } from "./groups.js";
+import { buildMeta, parseAllMetadata, serviceReminders, metaKey } from "./private-meta.js";
 import {
   WALLET_GROUPS, parseWalletFiles, entriesForMonth, calculateMonthlyBalance,
   monthKey, shiftedMonthKey, formatMonth
@@ -19,6 +21,10 @@ let selectingAccountRequired = false;
 let attemptedFastLogin = false;
 let signInReady = false;
 let editingEntry = null;
+let editingSavings = null;
+let withdrawApproved = false;
+let walletMetadata = new Map();
+const reminderSeen = new Set();
 let walletProgressTicket = 0;
 const displayCurrencies = { main: "MYR", other: "MYR" };
 let referenceRate = null;
@@ -81,11 +87,21 @@ const addPanel = document.getElementById("add-item-panel");
 const addHeading = document.getElementById("add-item-heading");
 const addForm = document.getElementById("add-item-form");
 const addGroup = document.getElementById("add-item-group");
+const addCategoryField = document.getElementById("add-category-field");
+const addCategoryName = document.getElementById("add-category-name");
+const addItemSelectField = document.getElementById("add-item-select-field");
+const addItemSelect = document.getElementById("add-item-select");
+const addNameField = document.getElementById("add-item-name-field");
 const addName = document.getElementById("add-item-name");
 const addMonth = document.getElementById("add-item-month");
 const addAmount = document.getElementById("add-item-amount");
 const addRecurringField = document.getElementById("add-recurring-field");
 const addRecurring = document.getElementById("add-item-recurring");
+const addOptions = document.getElementById("add-item-options");
+const addHoverNote = document.getElementById("add-item-hover-note");
+const addLastService = document.getElementById("add-last-service");
+const addServiceInterval = document.getElementById("add-service-interval");
+const addRemindBefore = document.getElementById("add-remind-before");
 const addRetailField = document.getElementById("add-retail-field");
 const addUrlField = document.getElementById("add-url-field");
 const addRemarkField = document.getElementById("add-remark-field");
@@ -96,6 +112,23 @@ const addStatus = document.getElementById("add-item-status");
 const submitItemButton = document.getElementById("submit-item-button");
 const cancelItemButton = document.getElementById("cancel-item-button");
 const deleteItemButton = document.getElementById("delete-item-button");
+const savingsPanel = document.getElementById("saving-settings-panel");
+const savingsForm = document.getElementById("saving-settings-form");
+const savingsName = document.getElementById("saving-settings-name");
+const savingsAccessible = document.getElementById("saving-accessible");
+const savingsNote = document.getElementById("saving-hover-note");
+const savingsStatus = document.getElementById("saving-settings-status");
+const savingsCancel = document.getElementById("saving-settings-cancel");
+const savingsSave = document.getElementById("saving-settings-save");
+const walletDialog = document.getElementById("wallet-dialog");
+const walletDialogText = document.getElementById("wallet-dialog-text");
+const walletDialogCancel = document.getElementById("wallet-dialog-cancel");
+const walletDialogOk = document.getElementById("wallet-dialog-ok");
+const hoverTooltip = document.createElement("div");
+hoverTooltip.className = "hover-tooltip";
+hoverTooltip.hidden = true;
+hoverTooltip.setAttribute("role", "tooltip");
+document.body.append(hoverTooltip);
 
 function readRememberedBrowser() {
   try { return localStorage.getItem(TRUST_KEY) === "yes"; }
