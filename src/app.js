@@ -437,9 +437,16 @@ function tooltipText(entry) {
   return lines.join("\n\n");
 }
 
-function addItemNameCell(row, entry) {
+function addItemNameCell(row, entry, isHold = false) {
   const cell = document.createElement("td");
   cell.className = "wallet-item";
+  if (isHold) {
+    const pill = document.createElement("span");
+    pill.className = "hold-badge";
+    pill.textContent = "Hold";
+    pill.title = "Suggested to postpone";
+    cell.append(pill);
+  }
   const label = document.createElement("span");
   label.textContent = entry.item;
   const note = tooltipText(entry);
@@ -475,8 +482,10 @@ async function showDueServiceReminders() {
 function renderTable(month, target, groupStates, fromComparison = false) {
   const groups = entriesForMonth(walletEntries, month);
   let savingPlan = null;
+  let holds = new Set();
   try {
     savingPlan = calculateMonthlyPlan(walletEntries, month);
+    holds = suggestedHolds(walletEntries, month);
   } catch {
     // Display saved entries even if a planning total cannot be calculated.
   }
@@ -521,7 +530,8 @@ function renderTable(month, target, groupStates, fromComparison = false) {
 
     for (const entry of entries) {
       const row = document.createElement("tr");
-      addItemNameCell(row, entry);
+      addItemNameCell(row, entry,
+        holds.has(JSON.stringify([entry.group,entry.item,entry.month])));
       const viewCurrency = fromComparison ? displayCurrencies.other : displayCurrencies.main;
       const amountCell = addTextCell(row, formatWalletCurrency(
         entry.group === "Saving" ? entry.balance : entry.amount,
@@ -547,7 +557,8 @@ function renderTable(month, target, groupStates, fromComparison = false) {
       editButton.type = "button";
       editButton.className = "update-item-button";
       editButton.setAttribute("aria-label", "Update " + entry.item);
-      const editable = entry.group === "Saving" || entry.month >= currentMonth;
+      const editable = entry.group === "Saving" ||
+        (!entry.carryOver && entry.month >= currentMonth);
       editButton.disabled = !editable;
       editButton.title = editable
         ? entry.group === "Saving" ? "Savings settings" : "Update " + entry.item
@@ -586,12 +597,14 @@ function renderTable(month, target, groupStates, fromComparison = false) {
 
 function renderBalance() {
   walletBalanceWarning.hidden = true;
+  walletBalanceOutput.classList.remove("balance-negative");
   if (!walletBalanceReady || !activeFolderId || walletView.hidden) {
     walletBalanceRow.hidden = true;
     return;
   }
   walletBalanceRow.hidden = false;
   if (!walletBalanceComplete) {
+    walletUnpaidAmount.textContent = "—";
     walletBalanceAmount.textContent = "—";
     walletBalanceOutput.title = "Some records couldn't be read. Balance isn't available.";
     return;
@@ -599,6 +612,11 @@ function renderBalance() {
   try {
     const plan = calculateMonthlyPlan(walletEntries, currentMonth);
     walletBalanceWarning.hidden = !plan.insufficientForBills;
+    walletBalanceOutput.classList.toggle("balance-negative", plan.balance < 0);
+    walletUnpaidAmount.textContent = formatWalletCurrency(
+      calculateUnpaidForMonth(walletEntries,currentMonth),
+      displayCurrencies.main,referenceRate
+    );
     walletBalanceAmount.textContent = formatWalletCurrency(
       plan.balance, displayCurrencies.main, referenceRate
     );
@@ -607,6 +625,7 @@ function renderBalance() {
       : plan.savingsAdjusted ? "Savings adjusted for this month."
       : "Planned balance, not a bank balance.";
   } catch {
+    walletUnpaidAmount.textContent = "—";
     walletBalanceAmount.textContent = "—";
     walletBalanceOutput.title = "Couldn't calculate the balance. Please refresh.";
   }
