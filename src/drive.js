@@ -245,14 +245,14 @@ function validateEntry(entry) {
     const max = field === "url" ? 300 : field === "retail" ? 120 : 300;
     const value = String(entry?.[field] || "").trim();
     if (value.length > max || /[\t\r\n\x00-\x1f]/.test(value)) {
-      throw new Error("Remove tabs or newlines from " + field + ".");
+      throw new Error("Please use a single line for " + field + ".");
     }
     optional[field] = value;
   }
   if (optional.url) {
     let url;
     try { url = new URL(optional.url); }
-    catch { throw new Error("Enter a valid URL starting with https://"); }
+    catch { throw new Error("Enter a valid website link, starting with https://"); }
     if (!["https:", "http:"].includes(url.protocol)) {
       throw new Error("Only http or https links are supported.");
     }
@@ -341,7 +341,7 @@ async function createWalletTextFile(token, folderId, filename, line) {
     { method: "POST", headers: { Authorization: "Bearer " + token }, body: payload }
   );
   if (!response.ok) {
-    throw new Error("Google Drive could not save the new item (" + response.status + ").");
+    throw new Error("Couldn’t save your item (" + response.status + ").");
   }
   const file = await response.json();
   if (!file.id || file.name !== filename ||
@@ -363,7 +363,7 @@ async function replaceWalletText(token, fileId, text) {
     }
   );
   if (!response.ok) {
-    throw new Error("Google Drive could not append the new month (" + response.status + ").");
+    throw new Error("Couldn’t save your item (" + response.status + ").");
   }
   const result = await response.json();
   if (result.id !== fileId) {
@@ -405,13 +405,13 @@ export async function addWalletItem(token, folderId, entry) {
       throw new Error("An existing TXT file conflicts with this item. No changes were saved.");
     }
     if (monthIsPresent(existing.content, item.group, item.item, item.month)) {
-      throw new Error("This item already exists for that month. Editing will be added later.");
+      throw new Error("This item is already listed for that month. Use Update to change it.");
     }
     expected = existing.content +
       (existing.content && !existing.content.endsWith("\n") ? "\n" : "") +
       item.line;
     if (new Blob([expected]).size > WRITE_LIMIT) {
-      throw new Error("Item log has reached the file size limit. No changes were saved.");
+      throw new Error("This item’s saved history is full. No changes were made.");
     }
     await replaceWalletText(token, existing.file.id, expected);
     fileId = existing.file.id;
@@ -424,7 +424,7 @@ export async function addWalletItem(token, folderId, entry) {
   // Verify full file text before reporting success. Never write any financial data to GitHub.
   const confirmed = await getFileText(token, fileId);
   if (confirmed !== expected) {
-    throw new Error("Saved TXT content could not be verified. Check Drive before retrying.");
+    throw new Error("Your item might not have saved correctly. Check Google Drive before retrying.");
   }
   return { group: item.group, item: item.item, month: item.month };
 }
@@ -486,11 +486,11 @@ export async function updateWalletItem(token, folderId, changes) {
   const matches = [];
   for (const file of files) {
     if (Number(file.size || 0) > WRITE_LIMIT) {
-      throw new Error("An item log exceeds the safe file limit. Review it first.");
+      throw new Error("This item’s saved history is too large to update right now.");
     }
     const content = await getFileText(token, file.id);
     if (new Blob([content]).size > WRITE_LIMIT) {
-      throw new Error("An item log exceeds the safe file limit. Review it first.");
+      throw new Error("This item’s saved history is too large to update right now.");
     }
     if (file.name === filename || fileHasItem(content, item.group, item.item)) {
       matches.push({ file, content });
@@ -498,12 +498,12 @@ export async function updateWalletItem(token, folderId, changes) {
   }
 
   if (matches.length !== 1) {
-    throw new Error("Could not uniquely locate this item log. Refresh before updating.");
+    throw new Error("Couldn’t find this item. Please refresh and try again.");
   }
   const existing = matches[0];
   if (existing.file.appProperties?.purpose !== ITEM_MARKER ||
       !fileHasItem(existing.content, item.group, item.item)) {
-    throw new Error("This item is not an app-managed record. No changes were saved.");
+    throw new Error("This item can’t be updated here yet. No changes were saved.");
   }
 
   const last = lastMonthSnapshot(existing.content, item.group, item.item, item.month);
@@ -530,13 +530,13 @@ export async function updateWalletItem(token, folderId, changes) {
     (existing.content && !existing.content.endsWith("\n") ? "\n" : "") +
     revised.join("\t") + "\n";
   if (new Blob([log]).size > WRITE_LIMIT) {
-    throw new Error("Item log reached its file size limit. No changes were saved.");
+    throw new Error("This item’s saved history is full. No changes were made.");
   }
 
   await replaceWalletText(token, existing.file.id, log);
   const confirmed = await getFileText(token, existing.file.id);
   if (confirmed !== log) {
-    throw new Error("Google Drive did not verify the updated log. Review it before retrying.");
+    throw new Error("Your update might not have saved correctly. Check Google Drive before retrying.");
   }
   return { group: item.group, item: item.item, month: item.month };
 }
