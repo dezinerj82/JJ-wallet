@@ -164,10 +164,10 @@ function renderMonth() {
 
     const button = document.createElement("button");
     button.type = "button";
-    button.className = "group-toggle";
+    button.className = "group-toggle group-" + group.toLowerCase();
     button.setAttribute("aria-expanded", String(expanded));
     button.setAttribute("aria-label", (expanded ? "Collapse " : "Expand ") + group);
-    button.textContent = (expanded ? "− " : "+ ") + group + " (" + entries.length + ")";
+    button.textContent = group;
     button.addEventListener("click", () => {
       expandedGroups.set(group, !expanded);
       renderMonth();
