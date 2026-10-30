@@ -88,6 +88,8 @@ const exchangeNotes = {
 };
 const refreshButton = document.getElementById("refresh-wallet-button");
 const addButton = document.getElementById("add-item-button");
+const walletSetupButton = document.getElementById("wallet-setup-button");
+const walletSetupFile = document.getElementById("wallet-setup-file");
 const addPanel = document.getElementById("add-item-panel");
 const addHeading = document.getElementById("add-item-heading");
 const addForm = document.getElementById("add-item-form");
@@ -302,6 +304,8 @@ function resetWallet() {
   comparisonMonth = shiftedMonthKey(currentMonth, 1);
   comparisonGroups.forEach((_, key) => comparisonGroups.set(key, true));
   otherMonthsButton.disabled = true;
+  walletSetupButton.disabled = true;
+  walletSetupFile.value = "";
   addPanel.hidden = true;
   editingEntry = null;
   deleteItemButton.hidden = true;
@@ -651,6 +655,7 @@ async function loadWalletRecords(message = "Refreshing your items...") {
   walletBalanceRow.hidden = true;
   refreshButton.disabled = true;
   addButton.disabled = true;
+  walletSetupButton.disabled = true;
   setWalletMessage("Loading items...");
 
   try {
@@ -706,6 +711,7 @@ async function loadWalletRecords(message = "Refreshing your items...") {
       refreshButton.disabled = false;
       addButton.disabled = !activeFolderId;
       otherMonthsButton.disabled = !activeFolderId;
+      walletSetupButton.disabled = !activeFolderId;
     }
   }
 }
@@ -728,6 +734,7 @@ async function onDriveReady() {
     activeFolderId = folder.id;
     addButton.disabled = false;
     otherMonthsButton.disabled = false;
+    walletSetupButton.disabled = false;
     if (folder.name !== "Wallet bills") {
       setWalletMessage("Rename the connected Drive folder to Wallet bills.", true);
     }
@@ -975,6 +982,64 @@ savingsForm.addEventListener("submit", async event => {
   } finally {
     savingsSave.disabled = false;
     savingsCancel.disabled = false;
+  }
+});
+
+walletSetupButton.addEventListener("click", () => {
+  if (!activeFolderId || !getDriveToken() || walletSetupButton.disabled) return;
+  walletSetupFile.click();
+});
+
+walletSetupFile.addEventListener("change", async () => {
+  const file = walletSetupFile.files?.[0];
+  if (!file) return;
+  const version = connectionVersion;
+  const folderId = activeFolderId;
+  const token = getDriveToken();
+  let progressTicket = null;
+  let started = false;
+  try {
+    if (!folderId || !token) throw new Error("Sign in again.");
+    if (file.size > 100 * 1024) throw new Error("Setup file is too large.");
+    const source = validateSetupPayload(JSON.parse(await file.text()));
+    if (version !== connectionVersion) return;
+    if (!await confirmWallet("Import November setup?")) return;
+    if (version !== connectionVersion || !getDriveToken()) return;
+
+    started = true;
+    walletSetupButton.disabled = true;
+    addButton.disabled = true;
+    refreshButton.disabled = true;
+    otherMonthsButton.disabled = true;
+    progressTicket = beginWalletProgress("Importing...");
+    const result = await importWalletSetup(token, folderId, source, (done,total) => {
+      if (version === connectionVersion) {
+        walletProgressText.textContent = "Importing " + done + " / " + total;
+      }
+    });
+    if (version !== connectionVersion) return;
+    await loadWalletRecords("Refreshing...");
+    if (walletBalanceReady) {
+      setWalletMessage("Import complete. " +
+        (result.created + result.updated) + " items saved.");
+    }
+  } catch (error) {
+    if (version === connectionVersion) {
+      setWalletMessage(
+        (error instanceof SyntaxError ? "Invalid setup file." :
+          error.message || "Import stopped.") +
+        (started ? " Select the file again to resume." : ""), true
+      );
+    }
+  } finally {
+    walletSetupFile.value = "";
+    if (progressTicket !== null) finishWalletProgress(progressTicket);
+    if (version === connectionVersion) {
+      walletSetupButton.disabled = !activeFolderId;
+      addButton.disabled = !activeFolderId;
+      refreshButton.disabled = false;
+      otherMonthsButton.disabled = !activeFolderId;
+    }
   }
 });
 
