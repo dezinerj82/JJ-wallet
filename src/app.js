@@ -1086,6 +1086,18 @@ savingsForm.addEventListener("submit", async event => {
   }
 });
 
+walletDownloadTemplate.addEventListener("click", () => {
+  const data = new Blob([csvTemplate()], {type:"text/csv;charset=utf-8"});
+  const url = URL.createObjectURL(data);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "home-wallet-template.csv";
+  document.body.append(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+});
+
 walletSetupButton.addEventListener("click", () => {
   if (!activeFolderId || !getDriveToken() || walletSetupButton.disabled) return;
   walletSetupFile.click();
@@ -1102,9 +1114,12 @@ walletSetupFile.addEventListener("change", async () => {
   try {
     if (!folderId || !token) throw new Error("Sign in again.");
     if (file.size > 100 * 1024) throw new Error("Setup file is too large.");
-    const source = validateSetupPayload(JSON.parse(await file.text()));
+    const raw = await file.text();
+    const source = file.name.toLowerCase().endsWith(".csv")
+      ? validateSetupPayload(parseWalletCsv(raw))
+      : validateSetupPayload(JSON.parse(raw));
     if (version !== connectionVersion) return;
-    if (!await confirmWallet("Import November setup?")) return;
+    if (!await confirmWallet("Import file?")) return;
     if (version !== connectionVersion || !getDriveToken()) return;
 
     started = true;
@@ -1127,7 +1142,7 @@ walletSetupFile.addEventListener("change", async () => {
   } catch (error) {
     if (version === connectionVersion) {
       setWalletMessage(
-        (error instanceof SyntaxError ? "Invalid setup file." :
+        (error instanceof SyntaxError ? "Invalid file." :
           error.message || "Import stopped.") +
         (started ? " Select the file again to resume." : ""), true
       );
