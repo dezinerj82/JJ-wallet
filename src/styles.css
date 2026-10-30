@@ -1,3 +1,25 @@
-/* Wallet stylesheet scaffold.
-   Future design should follow the active project handover instructions.
-*/
+/* Functional login layout only; full visual design is not implemented. */
+:root {
+  font-family: Arial, sans-serif;
+  color: #006d77;
+  background: #ffffff;
+}
+body { margin: 0; }
+main { max-width: 32rem; margin: 3rem auto; padding: 0 1.25rem; }
+h1 { font-weight: 800; }
+h2 { font-size: 1.125rem; }
+button {
+  border: 1px solid #006d77;
+  border-radius: 999px;
+  padding: 0.85rem 1.3rem;
+  min-height: 2.75rem;
+  background: #edf6f9;
+  color: #006d77;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 9px rgba(0, 109, 119, 0.14);
+}
+button:disabled { opacity: 0.55; cursor: wait; box-shadow: none; }
+button:focus-visible { outline: 3px solid #e29578; outline-offset: 3px; }
+[hidden] { display: none !important; }
