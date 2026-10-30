@@ -41,7 +41,8 @@
           <button type="button" id="other-months-button" aria-haspopup="dialog" aria-controls="other-months-window" aria-expanded="false">Other months</button>
           <button type="button" id="refresh-wallet-button">Refresh</button>
           <button type="button" id="wallet-setup-button" disabled>Import</button>
-          <input type="file" id="wallet-setup-file" accept=".json,application/json" hidden>
+          <button type="button" id="wallet-download-template">Download template</button>
+          <input type="file" id="wallet-setup-file" accept=".csv,text/csv,.json,application/json" hidden>
           <button type="button" id="add-item-button">Add</button>
           <button type="button" id="logout-button">Sign out</button>
         </div>
@@ -160,6 +161,22 @@
         </form>
       </section>
 
+      <section id="pay-item-panel" class="add-item-panel" hidden>
+        <h3>Pay item</h3>
+        <form id="pay-item-form" autocomplete="off">
+          <p id="pay-item-name"></p>
+          <label class="setting-note">Payment (RM)
+            <input id="pay-item-amount" type="number" min="0.01" step="0.01"
+              inputmode="decimal" required>
+          </label>
+          <p id="pay-item-status" class="form-status" role="status" aria-live="polite"></p>
+          <div class="form-actions-right">
+            <button type="button" id="pay-item-cancel">Cancel</button>
+            <button type="submit" id="pay-item-save">Pay</button>
+          </div>
+        </form>
+      </section>
+
       <p id="wallet-state" class="visually-hidden" role="status" aria-live="polite"></p>
 
       <div class="wallet-table-wrap" id="wallet-table-wrap" hidden>
@@ -190,6 +207,10 @@
 
       <div id="wallet-balance-row" class="wallet-balance-row" hidden>
         <span id="wallet-balance-warning" class="wallet-balance-warning" hidden>Income is too low.</span>
+        <output id="wallet-unpaid" class="wallet-balance-pill wallet-unpaid-pill" aria-live="polite">
+          <span>Unpaid :</span>
+          <span id="wallet-unpaid-amount">—</span>
+        </output>
         <output id="wallet-balance" class="wallet-balance-pill" aria-live="polite"
           aria-describedby="wallet-balance-description">
           <span>Balance :</span>
