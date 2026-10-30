@@ -605,7 +605,6 @@ function renderTable(month, target, groupStates, fromComparison = false) {
 }
 
 function renderBalance() {
-  walletBalanceWarning.hidden = true;
   walletUnpaidOutput.hidden = true;
   walletBalanceOutput.classList.remove("balance-negative");
   if (!walletBalanceReady || !activeFolderId || walletView.hidden) {
