@@ -797,11 +797,12 @@ function enteredItemName() {
 
 function enteredPrivateMeta(group, item) {
   if (group === "Withdraw") return null;
+  const service = group !== "IN" && group !== "Saving";
   const input = {
     note: addHoverNote.value,
-    lastService: addLastService.value.replace("-", ""),
-    interval: Number(addServiceInterval.value),
-    remindBefore: Number(addRemindBefore.value)
+    lastService: service ? addLastService.value.replace("-", "") : "",
+    interval: service ? Number(addServiceInterval.value) : 0,
+    remindBefore: service ? Number(addRemindBefore.value) : 0
   };
   const hasDetails = Boolean(input.note.trim() || input.lastService ||
     input.interval || input.remindBefore || editingEntry?.meta);
