@@ -11,7 +11,7 @@
   <main id="app">
     <h1>Home wallet</h1>
 
-    <section id="login-view" aria-labelledby="login-heading">
+    <section id="login-view" aria-labelledby="login-heading" hidden>
       <h2 id="login-heading">Login to start</h2>
       <p id="setup-status" role="status" aria-live="polite">Preparing Google sign-in...</p>
 
@@ -35,6 +35,7 @@
         <h2 id="wallet-heading">Monthly wallet</h2>
         <div class="wallet-actions">
           <button type="button" id="refresh-wallet-button">Refresh</button>
+          <button type="button" id="add-item-button">Add</button>
           <button type="button" id="logout-button">Sign out</button>
         </div>
       </div>
@@ -44,6 +45,45 @@
         <strong id="month-label" aria-live="polite"></strong>
         <button type="button" id="month-next-button">Next month</button>
       </nav>
+
+      <section id="add-item-panel" class="add-item-panel" aria-labelledby="add-item-heading" hidden>
+        <h3 id="add-item-heading">Add item</h3>
+        <form id="add-item-form" autocomplete="off">
+          <div class="add-grid">
+            <label>Group
+              <select id="add-item-group" required>
+                <option value="IN">IN</option>
+                <option value="Saving" disabled>Saving (available after payment setup)</option>
+                <option value="Bills">Bills</option>
+                <option value="Others">Others</option>
+              </select>
+            </label>
+            <label>Item
+              <input id="add-item-name" type="text" maxlength="120" required placeholder="Item name">
+            </label>
+            <label>Month
+              <input id="add-item-month" type="month" required>
+            </label>
+            <label>Amount (RM)
+              <input id="add-item-amount" type="number" min="0" step="0.01" inputmode="decimal" required placeholder="Enter amount">
+            </label>
+            <label id="add-retail-field" hidden>Retail
+              <input id="add-item-retail" type="text" maxlength="120">
+            </label>
+            <label id="add-url-field" hidden>URL (optional)
+              <input id="add-item-url" type="url" maxlength="300" placeholder="https://">
+            </label>
+            <label id="add-remark-field" hidden>Remark (optional)
+              <input id="add-item-remark" type="text" maxlength="300">
+            </label>
+          </div>
+          <p id="add-item-status" class="form-status" role="status" aria-live="polite"></p>
+          <div class="form-actions">
+            <button type="submit" id="submit-item-button">Submit</button>
+            <button type="button" id="cancel-item-button">Cancel</button>
+          </div>
+        </form>
+      </section>
 
       <p id="wallet-state" class="visually-hidden" role="status" aria-live="polite"></p>
 
