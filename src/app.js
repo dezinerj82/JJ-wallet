@@ -457,7 +457,7 @@ function renderTable(month, target, groupStates, fromComparison = false) {
     button.className = "group-toggle group-" +
       (isCustomGroup(group) ? "custom" : group.toLowerCase());
     button.setAttribute("aria-expanded", String(expanded));
-    button.setAttribute("aria-label", (expanded ? "Collapse " : "Expand ") + group);
+    button.setAttribute("aria-label", (expanded ? "Collapse " : "Expand ") + displayGroup(group));
     button.textContent = displayGroup(group);
     button.addEventListener("click", () => {
       groupStates.set(group, !expanded);
@@ -847,6 +847,7 @@ function openUpdateForm(entry) {
     return;
   }
   if (entry.group === "Saving" || entry.month < currentMonth) return;
+  closeSavingSettings();
 
   addForm.reset();
   editingEntry = { ...entry };
