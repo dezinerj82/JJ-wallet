@@ -130,7 +130,7 @@ export function parseWalletCsv(text, today = new Date()) {
     if (data.LastService) meta.lastService = keyMonth(data.LastService,"LastService");
     if (data.ServiceEvery) meta.interval =
       exactInteger(data.ServiceEvery,"ServiceEvery",[3,6,12]);
-    if (data.RemindBefore && !data.Repeat) meta.remindBefore =
+    if (data.RemindBefore && (data.LastService || data.ServiceEvery || !data.Repeat)) meta.remindBefore =
       exactInteger(data.RemindBefore,"RemindBefore",[0,1,2]);
     if (group === "Saving") {
       if (savings !== null) {
