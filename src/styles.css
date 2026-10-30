@@ -160,6 +160,11 @@ select:focus-visible {
   padding: .53rem 1.05rem;
   font-weight: 500;
 }
+#other-months-button {
+  --btn-bg: var(--alice-blue);
+  --btn-hover: #d9edf3;
+  --btn-text: #404a82;
+}
 #refresh-wallet-button {
   --btn-bg: var(--pearl-aqua);
   --btn-hover: #a7d9d2;
@@ -475,4 +480,154 @@ select:focus-visible {
     width: 100%;
     opacity: .7;
   }
+}
+
+
+/* Non-modal, movable comparison window: remains separate from the current month. */
+.other-months-window {
+  position: fixed;
+  z-index: 30;
+  top: 6rem;
+  right: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  width: min(35rem, calc(100vw - 2rem));
+  min-width: min(25rem, calc(100vw - 2rem));
+  max-width: calc(100vw - 1rem);
+  height: min(68vh, 40rem);
+  min-height: 17rem;
+  max-height: calc(100dvh - 1rem);
+  overflow: hidden;
+  resize: both;
+  background: var(--paper);
+  border: 1px solid #d5dce5;
+  border-radius: 18px;
+  box-shadow: 0 20px 55px rgba(32, 49, 75, .22), 0 6px 16px rgba(32, 49, 75, .1);
+}
+.other-months-header {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: .7rem;
+  padding: .75rem .9rem .75rem 1.1rem;
+  background: var(--soft-indigo);
+  color: var(--paper);
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+}
+.other-months-header:active { cursor: grabbing; }
+.other-months-heading {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: .08rem;
+}
+.other-months-heading h2 {
+  margin: 0;
+  font-size: 1.12rem;
+  line-height: 1.25;
+  color: inherit;
+  font-weight: 600;
+}
+.drag-hint {
+  font-size: .75rem;
+  font-weight: 400;
+  opacity: .82;
+}
+.other-months-close {
+  --btn-bg: var(--almond-silk);
+  --btn-hover: #ffd0c0;
+  --btn-text: #763c2c;
+  flex: 0 0 auto;
+  width: 2rem;
+  height: 2rem;
+  min-height: 2rem;
+  padding: 0;
+  font-size: 1.35rem;
+  font-weight: 400;
+  box-shadow: none;
+}
+.other-months-scroll {
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: auto;
+  padding: .85rem .85rem 1rem;
+  overscroll-behavior: contain;
+}
+.other-months-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .55rem;
+  margin: .15rem 0 1rem;
+}
+.other-months-nav button {
+  --btn-bg: var(--alice-blue);
+  --btn-hover: #d9edf3;
+  --btn-text: #005c66;
+  min-height: 2.05rem;
+  padding: .43rem .8rem;
+  font-size: .83rem;
+}
+#other-months-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: center;
+  font-size: .98rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.other-months-table-wrap {
+  box-shadow: none;
+  border-radius: 12px;
+}
+.other-months-table {
+  min-width: 27rem;
+}
+.other-months-table th,
+.other-months-table td {
+  font-size: .84rem;
+  line-height: 1.35;
+  padding: .55rem .58rem;
+}
+.other-months-table thead th {
+  padding: .65rem .58rem;
+  border-bottom-width: 2px;
+}
+.other-months-table .group-heading th {
+  padding: .65rem .55rem .3rem;
+}
+.other-months-table .group-toggle {
+  min-height: 1.9rem;
+  padding: .4rem .77rem;
+  font-size: .79rem;
+}
+.other-months-table .empty-row td {
+  padding: .45rem .8rem .65rem;
+}
+.other-months-table thead th:last-child,
+.other-months-table .wallet-update-cell {
+  width: 4.3rem;
+  text-align: center;
+}
+.other-months-table .wallet-detail {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 600px) {
+  .other-months-window {
+    top: 5rem;
+    right: .5rem;
+    width: calc(100vw - 1rem);
+    min-width: 0;
+    height: min(68dvh, 38rem);
+    min-height: 15rem;
+    resize: none;
+  }
+  .other-months-scroll { padding: .65rem; }
+  .other-months-nav { gap: .35rem; }
+  .other-months-nav button { padding: .45rem .62rem; }
+  .other-months-table { min-width: 25rem; }
 }
