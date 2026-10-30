@@ -1,3 +1,5 @@
+import { parseRecurringDirective } from "./recurring.js";
+
 // Pure read-only wallet record parsing. No financial records are stored in GitHub.
 // Item TXT lines are tab-separated. Last valid entry for an item/month wins.
 // Planning balance uses current saved items only; automatic carry-forward is not enabled yet.
@@ -61,6 +63,7 @@ function parseLine(line) {
 export function parseWalletFiles(files) {
   if (!Array.isArray(files)) throw new TypeError("Expected wallet TXT files.");
   const byMonth = new Map();
+  const repeatRules = new Map();
   let validLines = 0;
   let invalidLines = 0;
 
@@ -72,6 +75,16 @@ export function parseWalletFiles(files) {
 
     for (const line of file.content.split("\n")) {
       if (!line.trim()) continue;
+      if (line.startsWith("@RECUR\t")) {
+        const rule = parseRecurringDirective(line);
+        if (!rule) {
+          invalidLines++;
+        } else {
+          repeatRules.set(rule.item.toLocaleLowerCase("en"), rule.active);
+          validLines++;
+        }
+        continue;
+      }
       const entry = parseLine(line);
       if (!entry) {
         invalidLines++;
@@ -84,7 +97,11 @@ export function parseWalletFiles(files) {
   }
 
   return {
-    entries: Array.from(byMonth.values()).filter(entry => !entry.deleted),
+    entries: Array.from(byMonth.values())
+      .filter(entry => !entry.deleted)
+      .map(entry => entry.group === "Bills"
+        ? { ...entry, recurring: repeatRules.get(entry.item.toLocaleLowerCase("en")) === true }
+        : entry),
     validLines, invalidLines
   };
 }
