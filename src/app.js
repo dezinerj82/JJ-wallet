@@ -871,6 +871,56 @@ function openUpdateForm(entry) {
   addAmount.focus();
 }
 
+function closeSavingSettings() {
+  savingsPanel.hidden = true;
+  editingSavings = null;
+  savingsStatus.textContent = "";
+}
+
+function openSavingSettings(entry) {
+  if (!activeFolderId || !getDriveToken()) return;
+  const latest = entriesForMonth(walletEntries, currentMonth).Saving
+    .find(value => value.item === entry.item);
+  if (!latest) {
+    setWalletMessage("Savings item not found. Press Refresh.", true);
+    return;
+  }
+  closeAddPanel();
+  editingSavings = { ...latest };
+  savingsName.textContent = latest.item;
+  savingsAccessible.checked = latest.meta?.access === "accessible";
+  savingsNote.value = latest.meta?.note || "";
+  savingsStatus.textContent = "";
+  savingsPanel.hidden = false;
+  savingsAccessible.focus();
+}
+
+savingsCancel.addEventListener("click", closeSavingSettings);
+savingsForm.addEventListener("submit", async event => {
+  event.preventDefault();
+  const previous = editingSavings;
+  if (!previous || !activeFolderId || !getDriveToken()) return;
+  const version = connectionVersion;
+  savingsSave.disabled = true;
+  savingsCancel.disabled = true;
+  savingsStatus.textContent = "";
+  try {
+    await saveSavingSettings(getDriveToken(), activeFolderId, previous, {
+      access: savingsAccessible.checked ? "accessible" : "protected",
+      note: savingsNote.value
+    });
+    if (version !== connectionVersion) return;
+    closeSavingSettings();
+    await loadWalletRecords("Refreshing...");
+  } catch (error) {
+    if (version === connectionVersion) savingsStatus.textContent =
+      error.message || "Couldn't save. Try again.";
+  } finally {
+    savingsSave.disabled = false;
+    savingsCancel.disabled = false;
+  }
+});
+
 addButton.addEventListener("click", () => {
   if (!activeFolderId || !getDriveToken()) {
     setWalletMessage("Please sign in again to add an item.", true);
