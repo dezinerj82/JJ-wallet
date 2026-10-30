@@ -5,7 +5,7 @@ import {
 import { isWalletGroup } from "./groups.js";
 import { buildMeta, metaLine, lastMeta } from "./private-meta.js";
 import {
-  itemMarkerLine, parseItemMarker, validateSetupPayload,
+  itemMarkerLine, parseItemMarker, parseScheduleLine, validateSetupPayload,
   scheduleLine, lastSchedule, scheduledMonthsDue, scheduledRecordLine
 } from "./setup.js";
 
@@ -904,4 +904,175 @@ export async function withdrawSavingItem(token, folderId, selection) {
   if (savedRemark) fields.push(savedRemark);
   await writeVerifiedItem(token, existing.file, existing.text, fields.join("\t") + "\n");
   return {group: "Saving", item, month};
+}
+
+
+// One-time private setup import. Source JSON is selected locally by the signed
+// in user. The browser writes only to their private Drive item TXT files.
+export async function importWalletSetup(token, folderId, source, onProgress = () => {}) {
+  if (!token || !folderId) throw new Error("Sign in again.");
+  const input = validateSetupPayload(source);
+  const now = new Date();
+  const today = String(now.getFullYear()) +
+    String(now.getMonth() + 1).padStart(2, "0");
+  if (input.month < today) throw new Error("This setup is for a past month.");
+
+  const metadata = await listWalletFileMetadata(token, folderId);
+  const cache = [];
+  for (const file of metadata) {
+    if (Number(file.size || 0) > WRITE_LIMIT) throw new Error("Item history is too large.");
+    const content = await getFileText(token, file.id);
+    if (new Blob([content]).size > WRITE_LIMIT) throw new Error("Item history is too large.");
+    cache.push({ file, content });
+  }
+
+  // Preflight every item before ANY write; a conflict must never split an item
+  // across multiple files. Existing financial rows and prior edits always win.
+  const plans = [];
+  for (const entry of input.items) {
+    const filename = await itemFileName(entry.group, entry.item);
+    const matches = cache.filter(v => v.file.name === filename ||
+      fileHasItem(v.content, entry.group, entry.item));
+    if (matches.length > 1 ||
+        (matches.length && (matches[0].file.appProperties?.purpose !== ITEM_MARKER ||
+          !fileHasItem(matches[0].content, entry.group, entry.item)))) {
+      throw new Error("Conflicting item file. Check Drive first.");
+    }
+    const old = matches[0] || null;
+    const existing = old?.content || "";
+    let lines = "";
+
+    if (!fileHasItem(existing, entry.group, entry.item)) {
+      lines += itemMarkerLine(entry.group, entry.item);
+    }
+
+    if (entry.group === "Saving" && entry.openingBalance !== undefined) {
+      const oldSaving = existing.split("\n").some(line => {
+        const fields = line.replace(/\r$/, "").split("\t");
+        return fields[0] === "Saving" &&
+          String(fields[1] || "").toLocaleLowerCase("en") === entry.item.toLocaleLowerCase("en") &&
+          /^(?:19|20|21)\d{2}(?:0[1-9]|1[0-2])$/.test(fields[2]);
+      });
+      if (!oldSaving) {
+        lines += ["Saving", entry.item, input.month, "0.00", "0.00",
+          entry.openingBalance.toFixed(2)].join("\t") + "\n";
+      }
+    }
+
+    if (entry.record) {
+      // A manually edited or deleted month must never be restored by setup.
+      const history = existing + (existing && !existing.endsWith("\n") ? "\n" : "") + lines;
+      const already = history.split("\n").some(line => {
+        const cells = line.replace(/\r$/, "").split("\t");
+        return cells[0] === entry.group &&
+          String(cells[1] || "").toLocaleLowerCase("en") ===
+            entry.item.toLocaleLowerCase("en") && cells[2] === input.month;
+      });
+      if (!already) {
+        const money = entry.record.amount.toFixed(2);
+        const values = [entry.group, entry.item, input.month, money];
+        if (entry.group !== "IN") values.push("0.00", money);
+        lines += values.join("\t") + "\n";
+      }
+    }
+
+    // Never replace the user's own metadata or schedules during an import.
+    // Every metadata change remains a regular user-initiated settings edit.
+    if (entry.meta && !lastMeta(existing, entry.group, entry.item)) {
+      lines += metaLine(buildMeta(entry.group, entry.item, entry.meta));
+    }
+    if (entry.schedule) {
+      const prior = lastSchedule(existing, entry.group, entry.item);
+      const legacyRecurring = existing.split("\n").some(line =>
+        line.startsWith("@RECUR\tBills\t" + entry.item + "\t"));
+      if (!prior && !legacyRecurring) lines += scheduleLine(entry.schedule);
+      const effective = prior || (!legacyRecurring ? entry.schedule : null);
+      if (effective?.active) {
+        const combined = existing +
+          (existing && !existing.endsWith("\n") ? "\n" : "") + lines;
+        for (const month of scheduledMonthsDue(combined, effective, now)) {
+          lines += scheduledRecordLine(effective, month);
+        }
+      }
+    }
+    const expected = existing +
+      (existing && !existing.endsWith("\n") ? "\n" : "") + lines;
+    if (new Blob([expected]).size > WRITE_LIMIT) {
+      throw new Error("Item history is full.");
+    }
+    plans.push({ entry, filename, old, expected, changed: !!lines });
+  }
+
+  let created = 0, updated = 0, unchanged = 0;
+  for (let i = 0; i < plans.length; i++) {
+    const plan = plans[i];
+    if (!plan.changed) {
+      unchanged++;
+      onProgress(i + 1, plans.length);
+      continue;
+    }
+    let fileId;
+    if (plan.old) {
+      // Re-read before every write to refuse unexpected changes.
+      const latest = await getFileText(token, plan.old.file.id);
+      if (latest !== plan.old.content) throw new Error("Item changed. Press Refresh.");
+      await replaceWalletText(token, plan.old.file.id, plan.expected);
+      fileId = plan.old.file.id;
+      updated++;
+    } else {
+      const createdFile = await createWalletTextFile(
+        token, folderId, plan.filename, plan.expected
+      );
+      fileId = createdFile.id;
+      created++;
+    }
+    if (await getFileText(token, fileId) !== plan.expected) {
+      throw new Error("Couldn't verify the setup. Press Refresh.");
+    }
+    onProgress(i + 1, plans.length);
+  }
+  return { created, updated, unchanged, total: plans.length };
+}
+
+// Authenticated schedule catch-up. No rule changes and no financial history
+// are stored anywhere outside the existing private item TXT files.
+export async function renewScheduledItems(token, folderId, contents) {
+  if (!token || !folderId) throw new Error("Sign in again.");
+  const now = new Date();
+  const targets = [];
+  for (const raw of contents) {
+    if (!raw?.name?.toLowerCase().endsWith(".txt") ||
+        typeof raw.content !== "string") continue;
+    const all = raw.content.split("\n").filter(line => line.startsWith("@SCHEDULE\t"));
+    const names = new Map();
+    for (const line of all) {
+      const rule = parseScheduleLine(line);
+      if (!rule) throw new Error("Invalid scheduled item.");
+      names.set(JSON.stringify([rule.group,rule.item.toLocaleLowerCase("en")]), rule);
+    }
+    if (names.size > 1) throw new Error("Mixed schedule file. Check Drive.");
+    for (const rule of names.values()) {
+      if (scheduledMonthsDue(raw.content, rule, now).length) targets.push({
+        fileName:raw.name,group:rule.group,item:rule.item
+      });
+    }
+  }
+  if (!targets.length) return false;
+  const metadata = await listWalletFileMetadata(token,folderId);
+  let changed = false;
+  for (const target of targets) {
+    const matches = metadata.filter(x => x.name === target.fileName);
+    if (matches.length !== 1 ||
+        matches[0].appProperties?.purpose !== ITEM_MARKER) {
+      throw new Error("Scheduled item needs review.");
+    }
+    const content = await getFileText(token,matches[0].id);
+    const rule = lastSchedule(content,target.group,target.item);
+    const due = scheduledMonthsDue(content,rule,now);
+    if (!due.length) continue;
+    const additions = due.map(month => scheduledRecordLine(rule,month)).join("");
+    await writeVerifiedItem(token,matches[0],content,additions);
+    changed = true;
+  }
+  return changed;
 }
