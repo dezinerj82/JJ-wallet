@@ -562,6 +562,21 @@ function moveOtherMonthsTo(left, top) {
   otherMonthsWindow.style.right = "auto";
 }
 let draggingOtherMonths = null;
+otherMonthsDragHandle.addEventListener("keydown", event => {
+  if (event.target !== otherMonthsDragHandle || otherMonthsWindow.hidden) return;
+  const step = event.shiftKey ? 40 : 18;
+  const moves = {
+    ArrowLeft: [-step, 0],
+    ArrowRight: [step, 0],
+    ArrowUp: [0, -step],
+    ArrowDown: [0, step]
+  };
+  const delta = moves[event.key];
+  if (!delta) return;
+  const rect = otherMonthsWindow.getBoundingClientRect();
+  moveOtherMonthsTo(rect.left + delta[0], rect.top + delta[1]);
+  event.preventDefault();
+});
 otherMonthsDragHandle.addEventListener("pointerdown", event => {
   if (event.button !== 0 || event.target.closest("button") || otherMonthsWindow.hidden) return;
   const rect = otherMonthsWindow.getBoundingClientRect();
