@@ -163,3 +163,47 @@ export async function testTextStorage(token, folderId) {
   }
   return { name: file.name, verified: true };
 }
+
+
+// Read-only wallet TXT loading. The separate storage-check.txt file is ignored.
+// Storage writes for real wallet items are not enabled in this stage.
+export async function readWalletTextFiles(token, folderId) {
+  if (!token || !folderId) throw new Error("Sign in and connect Wallet bills first.");
+
+  const q = "'" + folderId + "' in parents and trashed = false";
+  const files = [];
+  let pageToken = "";
+  do {
+    const url = new URL(API);
+    url.searchParams.set("q", q);
+    url.searchParams.set("fields", "nextPageToken,files(id,name,mimeType,size)");
+    url.searchParams.set("pageSize", "100");
+    if (pageToken) url.searchParams.set("pageToken", pageToken);
+    const page = await driveFetch(url, token);
+    files.push(...(page.files || []));
+    if (files.length > 500) {
+      throw new Error("Too many files in Wallet bills. Review the folder before loading.");
+    }
+    pageToken = page.nextPageToken || "";
+  } while (pageToken);
+
+  const walletFiles = files.filter(file =>
+    file.name?.toLowerCase().endsWith(".txt") &&
+    file.name.toLowerCase() !== TEST_FILE_NAME
+  ).sort((a, b) => a.name.localeCompare(b.name, "en"));
+
+  const contents = [];
+  for (const file of walletFiles) {
+    // The segmenting limit is not implemented yet; never silently truncate.
+    if (Number(file.size || 0) > 5 * 1024 * 1024) {
+      throw new Error("A wallet TXT file exceeds the read limit: " + file.name);
+    }
+    const content = await getFileText(token, file.id);
+    if (new Blob([content]).size > 5 * 1024 * 1024) {
+      throw new Error("A wallet TXT file exceeds the read limit: " + file.name);
+    }
+    contents.push({ name: file.name, content });
+  }
+
+  return contents;
+}
