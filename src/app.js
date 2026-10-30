@@ -8,6 +8,7 @@ import {
 const TRUST_KEY = "home-wallet-remember-browser-v1";
 const currentMonth = monthKey(new Date());
 let selectedMonth = currentMonth;
+let comparisonMonth = shiftedMonthKey(currentMonth, 1);
 let walletEntries = [];
 let activeFolderId = null;
 let connectionVersion = 0;
@@ -17,6 +18,7 @@ let signInReady = false;
 let editingEntry = null;
 let walletProgressTicket = 0;
 const expandedGroups = new Map(WALLET_GROUPS.map(group => [group, true]));
+const comparisonGroups = new Map(WALLET_GROUPS.map(group => [group, true]));
 
 const loginView = document.getElementById("login-view");
 const status = document.getElementById("setup-status");
@@ -37,8 +39,14 @@ const itemProgressText = document.getElementById("item-progress-text");
 const walletTableWrap = document.getElementById("wallet-table-wrap");
 const walletTableBody = document.getElementById("wallet-table-body");
 const monthLabel = document.getElementById("month-label");
-const prevButton = document.getElementById("month-prev-button");
-const nextButton = document.getElementById("month-next-button");
+const otherMonthsButton = document.getElementById("other-months-button");
+const otherMonthsWindow = document.getElementById("other-months-window");
+const otherMonthsDragHandle = document.getElementById("other-months-drag-handle");
+const otherMonthsClose = document.getElementById("other-months-close");
+const otherMonthsPrev = document.getElementById("other-months-prev");
+const otherMonthsNext = document.getElementById("other-months-next");
+const otherMonthsLabel = document.getElementById("other-months-label");
+const otherMonthsBody = document.getElementById("other-months-table-body");
 const refreshButton = document.getElementById("refresh-wallet-button");
 const addButton = document.getElementById("add-item-button");
 const addPanel = document.getElementById("add-item-panel");
@@ -120,6 +128,10 @@ function resetWallet() {
   walletView.hidden = true;
   walletTableWrap.hidden = true;
   walletTableBody.replaceChildren();
+  closeOtherMonths(false);
+  comparisonMonth = shiftedMonthKey(currentMonth, 1);
+  comparisonGroups.forEach((_, key) => comparisonGroups.set(key, true));
+  otherMonthsButton.disabled = true;
   addPanel.hidden = true;
   editingEntry = null;
   addGroup.disabled = false;
@@ -153,8 +165,7 @@ function showSignedIn() {
   walletView.hidden = false;
   setWalletMessage("Opening wallet...");
   beginWalletProgress("Getting your wallet ready...");
-  monthLabel.textContent = formatMonth(selectedMonth);
-  prevButton.disabled = true;
+  monthLabel.textContent = formatMonth(currentMonth);
 }
 
 function showUnauthorized(email) {
@@ -179,16 +190,14 @@ function addTextCell(row, text, className) {
   return cell;
 }
 
-function renderMonth() {
-  const groups = entriesForMonth(walletEntries, selectedMonth);
-  monthLabel.textContent = formatMonth(selectedMonth);
-  prevButton.disabled = selectedMonth <= currentMonth;
-
+// The main and movable comparison tables share exactly the same row renderer.
+function renderTable(month, target, groupStates, fromComparison = false) {
+  const groups = entriesForMonth(walletEntries, month);
   const rows = document.createDocumentFragment();
+
   for (const group of WALLET_GROUPS) {
     const entries = groups[group];
-    const expanded = expandedGroups.get(group) !== false;
-
+    const expanded = groupStates.get(group) !== false;
     const headingRow = document.createElement("tr");
     headingRow.className = "group-heading";
     const headingCell = document.createElement("th");
@@ -202,33 +211,30 @@ function renderMonth() {
     button.setAttribute("aria-label", (expanded ? "Collapse " : "Expand ") + group);
     button.textContent = group;
     button.addEventListener("click", () => {
-      expandedGroups.set(group, !expanded);
-      renderMonth();
+      groupStates.set(group, !expanded);
+      renderTable(month, target, groupStates, fromComparison);
     });
 
     headingCell.append(button);
     headingRow.append(headingCell);
     rows.append(headingRow);
-
     if (!expanded) continue;
+
     if (!entries.length) {
-      const empty = document.createElement("tr");
-      empty.className = "empty-row";
-      const cell = document.createElement("td");
-      cell.colSpan = 4;
-      cell.textContent = "No items";
-      empty.append(cell);
-      rows.append(empty);
+      const emptyRow = document.createElement("tr");
+      emptyRow.className = "empty-row";
+      const emptyCell = document.createElement("td");
+      emptyCell.colSpan = 4;
+      emptyCell.textContent = "No items";
+      emptyRow.append(emptyCell);
+      rows.append(emptyRow);
       continue;
     }
+
     for (const entry of entries) {
       const row = document.createElement("tr");
       addTextCell(row, entry.item, "wallet-item");
-      const value = entry.group === "Saving" ? entry.balance : entry.amount;
-      addTextCell(row, formatAmount(value), "wallet-amount");
-
-      // Details are only the user's own remark. Payment and storage data
-      // remain in the item record but aren't presented as log messages.
+      addTextCell(row, formatAmount(entry.group === "Saving" ? entry.balance : entry.amount), "wallet-amount");
       addTextCell(row, entry.remark || "—", "wallet-detail");
 
       const actionCell = document.createElement("td");
@@ -240,7 +246,7 @@ function renderMonth() {
       const editable = entry.group !== "Saving" && entry.month >= currentMonth;
       editButton.disabled = !editable;
       editButton.title = editable ? "Update " + entry.item :
-        "Completed months and savings balances cannot be edited here";
+        "Past months and savings balances cannot be edited here";
       const pencil = document.createElementNS("http://www.w3.org/2000/svg", "svg");
       pencil.setAttribute("viewBox", "0 0 24 24");
       pencil.setAttribute("width", "16");
@@ -256,15 +262,62 @@ function renderMonth() {
       pencil.append(mark);
       editButton.append(pencil);
       if (editable) {
-        editButton.addEventListener("click", () => openUpdateForm(entry));
+        editButton.addEventListener("click", () => {
+          openUpdateForm(entry);
+          if (fromComparison) {
+            addPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+          }
+        });
       }
       actionCell.append(editButton);
       row.append(actionCell);
       rows.append(row);
     }
   }
-  walletTableBody.replaceChildren(rows);
+  target.replaceChildren(rows);
 }
+
+function renderMonth() {
+  // The main page always displays the current month.
+  selectedMonth = currentMonth;
+  monthLabel.textContent = formatMonth(currentMonth);
+  renderTable(currentMonth, walletTableBody, expandedGroups);
+}
+
+function renderComparisonMonth() {
+  if (otherMonthsWindow.hidden) return;
+  otherMonthsLabel.textContent = formatMonth(comparisonMonth);
+  otherMonthsPrev.disabled = comparisonMonth <= "190001";
+  otherMonthsNext.disabled = comparisonMonth >= "219912";
+  renderTable(comparisonMonth, otherMonthsBody, comparisonGroups, true);
+}
+
+function closeOtherMonths(restoreFocus = true) {
+  const wasOpen = !otherMonthsWindow.hidden;
+  otherMonthsWindow.hidden = true;
+  otherMonthsButton.setAttribute("aria-expanded", "false");
+  otherMonthsBody.replaceChildren();
+  if (restoreFocus && wasOpen) otherMonthsButton.focus();
+}
+
+function openOtherMonths() {
+  if (!activeFolderId || !getDriveToken()) {
+    setWalletMessage("Please sign in again to view other months.", true);
+    return;
+  }
+  if (!otherMonthsWindow.hidden) {
+    otherMonthsClose.focus();
+    return;
+  }
+  otherMonthsWindow.style.left = "";
+  otherMonthsWindow.style.top = "";
+  otherMonthsWindow.style.right = "";
+  otherMonthsWindow.hidden = false;
+  otherMonthsButton.setAttribute("aria-expanded", "true");
+  renderComparisonMonth();
+  otherMonthsClose.focus({ preventScroll: true });
+}
+
 
 async function loadWalletRecords(message = "Refreshing your items...") {
   if (!activeFolderId) return;
@@ -283,6 +336,7 @@ async function loadWalletRecords(message = "Refreshing your items...") {
     const parsed = parseWalletFiles(files);
     walletEntries = parsed.entries;
     renderMonth();
+    renderComparisonMonth();
     walletTableWrap.hidden = false;
     if (parsed.invalidLines) {
       setWalletMessage(
@@ -296,12 +350,14 @@ async function loadWalletRecords(message = "Refreshing your items...") {
     if (version !== connectionVersion) return;
     walletEntries = [];
     walletTableWrap.hidden = true;
+    closeOtherMonths(false);
     setWalletMessage(error.message || "Could not read wallet records.", true);
   } finally {
     finishWalletProgress(ticket);
     if (version === connectionVersion) {
       refreshButton.disabled = false;
       addButton.disabled = !activeFolderId;
+      otherMonthsButton.disabled = !activeFolderId;
     }
   }
 }
@@ -323,6 +379,7 @@ async function onDriveReady() {
     }
     activeFolderId = folder.id;
     addButton.disabled = false;
+    otherMonthsButton.disabled = false;
     if (folder.name !== "Wallet bills") {
       setWalletMessage("Rename the connected Drive folder to Wallet bills.", true);
     }
@@ -438,8 +495,8 @@ addForm.addEventListener("submit", async event => {
       ? await updateWalletItem(getDriveToken(), activeFolderId, { ...payload, previous })
       : await addWalletItem(getDriveToken(), activeFolderId, payload);
     if (version !== connectionVersion) return;
-    selectedMonth = result.month;
     expandedGroups.set(result.group, true);
+    comparisonGroups.set(result.group, true);
     closeAddPanel();
     await loadWalletRecords("Updating your list...");
   } catch (error) {
@@ -452,6 +509,7 @@ addForm.addEventListener("submit", async event => {
       submitItemButton.disabled = false;
       cancelItemButton.disabled = false;
       addButton.disabled = !activeFolderId;
+      otherMonthsButton.disabled = !activeFolderId;
       refreshButton.disabled = false;
     }
   }
@@ -474,16 +532,59 @@ loginButton.addEventListener("click", () => {
   }
 });
 
-prevButton.addEventListener("click", () => {
-  if (selectedMonth > currentMonth) {
-    selectedMonth = shiftedMonthKey(selectedMonth, -1);
-    renderMonth();
+otherMonthsButton.addEventListener("click", openOtherMonths);
+otherMonthsClose.addEventListener("click", () => closeOtherMonths());
+otherMonthsPrev.addEventListener("click", () => {
+  if (comparisonMonth > "190001") {
+    comparisonMonth = shiftedMonthKey(comparisonMonth, -1);
+    renderComparisonMonth();
   }
 });
+otherMonthsNext.addEventListener("click", () => {
+  if (comparisonMonth < "219912") {
+    comparisonMonth = shiftedMonthKey(comparisonMonth, 1);
+    renderComparisonMonth();
+  }
+});
+document.addEventListener("keydown", event => {
+  if (event.key === "Escape" && !otherMonthsWindow.hidden) closeOtherMonths();
+});
 
-nextButton.addEventListener("click", () => {
-  selectedMonth = shiftedMonthKey(selectedMonth, 1);
-  renderMonth();
+// Movable non-modal window, leaving the live wallet visible and usable.
+function moveOtherMonthsTo(left, top) {
+  const rect = otherMonthsWindow.getBoundingClientRect();
+  const maxLeft = Math.max(8, window.innerWidth - rect.width - 8);
+  const maxTop = Math.max(8, window.innerHeight - Math.min(rect.height, 90) - 8);
+  otherMonthsWindow.style.left = Math.min(Math.max(8, left), maxLeft) + "px";
+  otherMonthsWindow.style.top = Math.min(Math.max(8, top), maxTop) + "px";
+  otherMonthsWindow.style.right = "auto";
+}
+let draggingOtherMonths = null;
+otherMonthsDragHandle.addEventListener("pointerdown", event => {
+  if (event.button !== 0 || event.target.closest("button") || otherMonthsWindow.hidden) return;
+  const rect = otherMonthsWindow.getBoundingClientRect();
+  draggingOtherMonths = {
+    pointerId: event.pointerId,
+    offsetX: event.clientX - rect.left,
+    offsetY: event.clientY - rect.top
+  };
+  otherMonthsDragHandle.setPointerCapture(event.pointerId);
+  event.preventDefault();
+});
+otherMonthsDragHandle.addEventListener("pointermove", event => {
+  if (!draggingOtherMonths || event.pointerId !== draggingOtherMonths.pointerId) return;
+  moveOtherMonthsTo(event.clientX - draggingOtherMonths.offsetX,
+    event.clientY - draggingOtherMonths.offsetY);
+});
+function stopOtherMonthsDrag(event) {
+  if (draggingOtherMonths?.pointerId === event.pointerId) draggingOtherMonths = null;
+}
+otherMonthsDragHandle.addEventListener("pointerup", stopOtherMonthsDrag);
+otherMonthsDragHandle.addEventListener("pointercancel", stopOtherMonthsDrag);
+window.addEventListener("resize", () => {
+  if (otherMonthsWindow.hidden || !otherMonthsWindow.style.left) return;
+  const rect = otherMonthsWindow.getBoundingClientRect();
+  moveOtherMonthsTo(rect.left, rect.top);
 });
 
 refreshButton.addEventListener("click", () => {
