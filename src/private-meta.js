@@ -72,12 +72,28 @@ export function parseAllMetadata(files) {
   return byItem;
 }
 
-export function serviceReminders(metaMap, now = new Date()) {
+export function effectiveServiceMonth(meta, entries = [], now = new Date()) {
+  if (!meta?.lastService) return "";
+  const current = String(now.getFullYear()) + String(now.getMonth() + 1).padStart(2, "0");
+  let recent = meta.lastService;
+  for (const entry of entries) {
+    if (entry.group !== meta.group ||
+        entry.item.toLocaleLowerCase("en") !== meta.item.toLocaleLowerCase("en") ||
+        entry.month > current || entry.month < recent ||
+        !Number.isFinite(entry.amount) || entry.amount <= 0 ||
+        !Number.isFinite(entry.paid) || entry.paid < entry.amount) continue;
+    recent = entry.month;
+  }
+  return recent;
+}
+
+export function serviceReminders(metaMap, entries = [], now = new Date()) {
   const current = now.getFullYear() * 12 + now.getMonth();
   const dueItems = [];
   for (const meta of metaMap.values()) {
     if (!meta.lastService || !meta.interval || !meta.remindBefore) continue;
-    const last = Number(meta.lastService.slice(0,4)) * 12 + Number(meta.lastService.slice(4,6)) - 1;
+    const serviceMonth = effectiveServiceMonth(meta, entries, now);
+    const last = Number(serviceMonth.slice(0,4)) * 12 + Number(serviceMonth.slice(4,6)) - 1;
     const next = last + meta.interval;
     if (current >= next - meta.remindBefore) {
       const date = new Date(Math.floor(next / 12), next % 12, 1);
