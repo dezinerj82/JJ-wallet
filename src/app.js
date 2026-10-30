@@ -54,6 +54,7 @@ const itemProgressText = document.getElementById("item-progress-text");
 const walletTableWrap = document.getElementById("wallet-table-wrap");
 const walletTableBody = document.getElementById("wallet-table-body");
 const walletBalanceRow = document.getElementById("wallet-balance-row");
+const walletBalanceWarning = document.getElementById("wallet-balance-warning");
 const walletBalanceOutput = document.getElementById("wallet-balance");
 const walletBalanceAmount = document.getElementById("wallet-balance-amount");
 const monthLabel = document.getElementById("month-label");
@@ -286,6 +287,7 @@ function resetWallet() {
   walletBalanceReady = false;
   walletBalanceComplete = false;
   walletBalanceRow.hidden = true;
+  walletBalanceWarning.hidden = true;
   walletBalanceAmount.textContent = "—";
   walletBalanceOutput.removeAttribute("title");
   walletView.hidden = true;
@@ -553,6 +555,7 @@ function renderTable(month, target, groupStates, fromComparison = false) {
 }
 
 function renderBalance() {
+  walletBalanceWarning.hidden = true;
   if (!walletBalanceReady || !activeFolderId || walletView.hidden) {
     walletBalanceRow.hidden = true;
     return;
@@ -565,6 +568,7 @@ function renderBalance() {
   }
   try {
     const plan = calculateMonthlyPlan(walletEntries, currentMonth);
+    walletBalanceWarning.hidden = !plan.insufficientForBills;
     walletBalanceAmount.textContent = formatWalletCurrency(
       plan.balance, displayCurrencies.main, referenceRate
     );
