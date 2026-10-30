@@ -28,6 +28,7 @@ SAVING
 - All savings default to protected; the user must explicitly mark an existing savings item as accessible in Savings settings.
 - Withdraw appears in the category selector and shows a themed "Are you sure?" popup immediately upon selection.
 - Only accessible savings with verified confirmed balance may be withdrawn. Refuse zero, overdrafts, stale balances, and protected savings.
+- Until the payment workflow can confirm current-month allocations, exclude the current month's savings additions from the amount available to withdraw.
 - Confirmed withdrawals append a revised Savings TXT balance snapshot for the current month and never erase earlier lines.
 - Accessible savings permit explicit withdrawals only from already confirmed saved funds.
 - Future or uncommitted allocations must not be made available for withdrawals.
