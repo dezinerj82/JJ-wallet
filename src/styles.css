@@ -499,13 +499,14 @@ select:focus-visible {
   display: flex;
   flex-direction: column;
   width: min(35rem, calc(100vw - 2rem));
-  min-width: min(25rem, calc(100vw - 2rem));
+  min-width: min(18rem, calc(100vw - 1rem));
   max-width: calc(100vw - 1rem);
   height: min(68vh, 40rem);
-  min-height: 17rem;
+  min-height: min(15rem, calc(100dvh - 1rem));
   max-height: calc(100dvh - 1rem);
   overflow: hidden;
-  resize: both;
+  /* Drag/resize only the floating window; never modify the main page. */
+  resize: none;
   background: var(--paper);
   border: 1px solid #d5dce5;
   border-radius: 18px;
@@ -560,8 +561,10 @@ select:focus-visible {
   min-height: 0;
   flex: 1 1 auto;
   overflow: auto;
-  padding: .85rem .85rem 1rem;
+  padding: .85rem .85rem 1.5rem;
   overscroll-behavior: contain;
+  /* Typography and columns respond to the popup's own width, not the page. */
+  container-type: inline-size;
 }
 .other-months-nav {
   display: flex;
@@ -591,36 +594,59 @@ select:focus-visible {
   border-radius: 12px;
 }
 .other-months-table {
-  min-width: 27rem;
+  min-width: 0;
+  width: 100%;
+  table-layout: fixed;
 }
 .other-months-table th,
 .other-months-table td {
-  font-size: .84rem;
+  font-size: clamp(.7rem, 2.5cqi, 1.06rem);
   line-height: 1.35;
-  padding: .55rem .58rem;
+  padding: clamp(.25rem, 1.05cqi, .7rem);
+  overflow-wrap: anywhere;
 }
 .other-months-table thead th {
-  padding: .65rem .58rem;
+  padding: clamp(.34rem, 1.25cqi, .78rem) clamp(.25rem, 1.05cqi, .7rem);
   border-bottom-width: 2px;
 }
+.other-months-table thead th:nth-child(1) { width: 27%; }
+.other-months-table thead th:nth-child(2) { width: 32%; }
+.other-months-table thead th:nth-child(3) { width: 27%; }
+.other-months-table thead th:nth-child(4) {
+  width: 14%;
+  font-size: clamp(.61rem, 2.1cqi, .92rem);
+}
 .other-months-table .group-heading th {
-  padding: .65rem .55rem .3rem;
+  padding: clamp(.35rem, 1.25cqi, .7rem) clamp(.25rem, 1cqi, .65rem) .3rem;
 }
 .other-months-table .group-toggle {
-  min-height: 1.9rem;
-  padding: .4rem .77rem;
-  font-size: .79rem;
+  min-height: clamp(1.8rem, 5.5cqi, 2.35rem);
+  padding: clamp(.3rem, 1.1cqi, .53rem) clamp(.55rem, 2cqi, 1.05rem);
+  font-size: clamp(.72rem, 2.4cqi, .95rem);
 }
 .other-months-table .empty-row td {
-  padding: .45rem .8rem .65rem;
+  padding: .45rem .7rem .65rem;
 }
-.other-months-table thead th:last-child,
-.other-months-table .wallet-update-cell {
-  width: 4.3rem;
-  text-align: center;
-}
-.other-months-table .wallet-detail {
+.other-months-table .wallet-update-cell { text-align: center; }
+.other-months-table .wallet-amount {
+  white-space: normal;
   overflow-wrap: anywhere;
+}
+.other-months-table .wallet-detail { overflow-wrap: anywhere; }
+.other-months-table .amount-column { white-space: normal; }
+.other-months-table .amount-heading {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: .2rem;
+  white-space: normal;
+}
+@container (min-width: 460px) {
+  .other-months-table .amount-heading {
+    flex-direction: row;
+    align-items: center;
+    gap: .4rem;
+  }
 }
 
 @media (max-width: 600px) {
@@ -628,29 +654,16 @@ select:focus-visible {
     top: 5rem;
     right: .5rem;
     width: calc(100vw - 1rem);
-    min-width: 0;
+    min-width: min(18rem, calc(100vw - 1rem));
     height: min(68dvh, 38rem);
-    min-height: 15rem;
-    resize: none;
+    min-height: min(15rem, calc(100dvh - 1rem));
   }
   .other-months-scroll { padding: .65rem; }
   .other-months-nav { gap: .35rem; }
   .other-months-nav button { padding: .45rem .62rem; }
-  .other-months-table { min-width: 25rem; }
+  .other-months-table { min-width: 0; }
 }
 
-
-/* On larger displays, both months can be seen side by side. */
-@media (min-width: 1260px) {
-  body.other-months-open main {
-    max-width: calc(50vw - 1.7rem);
-    margin-left: 1.25rem;
-    margin-right: auto;
-  }
-  body.other-months-open main .wallet-table {
-    min-width: 33.5rem;
-  }
-}
 
 
 /* Currency switchers use the same gentle colour scheme as the other controls. */
@@ -710,7 +723,7 @@ select:focus-visible {
   min-width: 2.9rem;
   min-height: 1.65rem;
   padding: .2rem .27rem;
-  font-size: .78rem;
+  font-size: clamp(.7rem, 2.1cqi, .9rem);
 }
 .other-months-window .exchange-info {
   font-size: .77rem;
@@ -722,4 +735,47 @@ select:focus-visible {
 }
 @media (prefers-reduced-motion: reduce) {
   .currency-select { transition: none; }
+}
+
+/* Bottom-right resize grip: works with mouse, pen and touch. */
+.other-months-resize-handle {
+  position: absolute;
+  z-index: 2;
+  right: 0;
+  bottom: 0;
+  width: 1.65rem;
+  height: 1.65rem;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0 0 16px 0;
+  background: transparent;
+  box-shadow: none;
+  cursor: nwse-resize;
+  touch-action: none;
+}
+.other-months-resize-handle::after {
+  content: "";
+  position: absolute;
+  right: .3rem;
+  bottom: .3rem;
+  width: .9rem;
+  height: .9rem;
+  background: repeating-linear-gradient(135deg,
+    transparent 0 3px, var(--soft-indigo) 3px 4px,
+    transparent 4px 6px);
+  clip-path: polygon(100% 0, 100% 100%, 0 100%);
+}
+.other-months-resize-handle:hover:not(:disabled),
+.other-months-resize-handle:active:not(:disabled) {
+  background: var(--alice-blue);
+  box-shadow: none;
+  transform: none;
+}
+.other-months-nav button {
+  font-size: clamp(.73rem, 2.15cqi, .94rem);
+}
+#other-months-label { font-size: clamp(.85rem, 2.6cqi, 1.18rem); }
+@media (prefers-reduced-motion: reduce) {
+  .other-months-resize-handle { transition: none; }
 }
