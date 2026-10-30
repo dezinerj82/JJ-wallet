@@ -124,6 +124,7 @@ const savingsForm = document.getElementById("saving-settings-form");
 const savingsName = document.getElementById("saving-settings-name");
 const savingsAccessible = document.getElementById("saving-accessible");
 const savingsMonthlyTarget = document.getElementById("saving-monthly-target");
+const savingsAdjustable = document.getElementById("saving-adjustable");
 const savingsNote = document.getElementById("saving-hover-note");
 const savingsStatus = document.getElementById("saving-settings-status");
 const savingsCancel = document.getElementById("saving-settings-cancel");
@@ -959,6 +960,7 @@ function openSavingSettings(entry) {
   savingsName.textContent = latest.item;
   savingsAccessible.checked = latest.meta?.access === "accessible";
   savingsMonthlyTarget.value = String(latest.meta?.monthlySaving || 0);
+  savingsAdjustable.checked = latest.meta?.adjustableSaving === true;
   savingsNote.value = latest.meta?.note || "";
   savingsStatus.textContent = "";
   savingsPanel.hidden = false;
@@ -978,7 +980,8 @@ savingsForm.addEventListener("submit", async event => {
     await saveSavingSettings(getDriveToken(), activeFolderId, previous, {
       access: savingsAccessible.checked ? "accessible" : "protected",
       note: savingsNote.value,
-      monthlySaving: savingsMonthlyTarget.value
+      monthlySaving: savingsMonthlyTarget.value,
+      adjustableSaving: savingsAdjustable.checked
     });
     if (version !== connectionVersion) return;
     closeSavingSettings();
