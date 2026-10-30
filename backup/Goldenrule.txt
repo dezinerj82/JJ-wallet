@@ -46,6 +46,11 @@ SALARY / MONTHLY FORECAST
 - Set A = total spendable IN entries applicable to the active month.
 - Set B = savings allocations + current Bills + Others + outstanding carry-forward, counted once.
 - Forecast = Set A minus Set B.
+- The currently implemented Balance display uses the latest saved entries for the current month: IN minus Bills, Others and only savings additions recorded for that month.
+- Carried savings balances are never counted as spendable income or deducted again in later months.
+- Automatic unpaid carry-forward is not yet available, so the current Balance does not include unrecorded carried obligations.
+- Recalculate the displayed Balance after successful Add, Update, Delete and Refresh, and display it in the primary table's selected currency using the same verified reference rate.
+- When records are incomplete or fail to load, do not show a misleading calculated amount.
 - Forecast is a planning estimate, NOT actual bank balance.
 - Do not require tracking actual bank balances or a post-payment spending balance.
 - A change to an open month's entries immediately updates the forecast.
