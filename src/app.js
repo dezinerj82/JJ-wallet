@@ -808,6 +808,12 @@ function syncItemChoice() {
   addName.required = newItem;
   addItemSelect.required = true;
   if (!newItem) addName.value = "";
+  const managed = walletSchedules.some(rule => rule.active &&
+    rule.group === activeAddCategory() && rule.item === addItemSelect.value);
+  if (managed && activeAddCategory() === "Bills") {
+    addRecurringField.hidden = true;
+    addRecurring.checked = false;
+  }
 }
 
 function updateOptionalFields() {
@@ -818,8 +824,9 @@ function updateOptionalFields() {
   const service = group !== "IN" && group !== "Saving" && !isWithdrawal;
   addCategoryField.hidden = addGroup.value !== NEW_CATEGORY;
   addCategoryName.required = !addCategoryField.hidden;
-  addRecurringField.hidden = !bills || isWithdrawal;
-  if (!bills) addRecurring.checked = false;
+  const scheduleManaged = Boolean(editingEntry?.scheduled);
+  addRecurringField.hidden = !bills || isWithdrawal || scheduleManaged;
+  if (!bills || scheduleManaged) addRecurring.checked = false;
   addRetailField.hidden = !others;
   addUrlField.hidden = !others;
   addRemarkField.hidden = false;
