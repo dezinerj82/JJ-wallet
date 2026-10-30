@@ -35,6 +35,8 @@ SAVING
 - Carry the last confirmed savings balance into the next month.
 - Balance = last confirmed balance + committed savings additions - confirmed withdrawals.
 - Savings settings allow a private monthly target amount per existing savings item. Default target is zero until chosen.
+- A known opening savings balance can be stored as a private metadata value, separate from both saved deposits and planned monthly allocations.
+- An unknown savings opening balance remains unknown (display an em dash), never silently invent zero.
 - On each month view, calculate IN minus all Bills, Others and custom expense groups, and minus existing current-month recorded savings additions.
 - Automatically reduce ONLY uncommitted savings targets to fit the income remaining after those obligations, never below zero.
 - Distribute an affordable monthly savings budget proportionally across eligible savings targets, using exact cents and stable remainder allocation.
@@ -47,6 +49,7 @@ SAVING
 
 BILLS
 - Only Bills supports an opt-in Recurring monthly control in Add and Update.
+- An authenticated one-time import may configure private recurrence schedules for Income, Bills and Others independently of the Bills form checkbox.
 - A Bills recurrence rule is stored in the same private per-item TXT file as an append-only metadata directive; non-Bills groups are never generated automatically.
 - Initially fill selected current or future months through December 2027, without editing locked earlier months.
 - From June 2027, on the next authenticated wallet open or refresh, generate missing months for 2028 and 2029. From June 2029 generate 2030 and 2031, continuing every two years.
@@ -56,6 +59,9 @@ BILLS
 - Updating one occurrence changes only that month, unless the Recurring toggle is explicitly switched.
 - Switching recurrence off stops later automatic generation; months already saved remain until individually changed.
 - Re-read and verify private TXT contents after each recurrence write. A failed generation can be retried after Refresh without duplicating successfully written months.
+- Private @SCHEDULE directives support monthly, designated annual months, and fixed service intervals; optional dated amount changes must be explicit.
+- No missed recurrence reminders are replayed: only the present reminder date or lead month may trigger a new popup.
+- When service history contains a newly fully paid service, derive the next reminder from that actual latest paid-service month.
 - Recurring charges may be fixed, calendar-calculated, variable or contract-dependent.
 - Periodic charges appear only in configured due months, with reminders.
 - Others accepts new individual items, optional shop information, URL and remarks.
@@ -119,6 +125,11 @@ MAIN VIEW
 
 ADD / EDIT / REMOVE FORM
 - Category is a dropdown with existing groups, Withdraw, and Add new category.
+- An authorised wallet Import action accepts a locally selected private setup file, displays a confirmation, and writes only through the signed-in browser's existing Drive connection.
+- Do not embed imported names, amounts, dates or notes in public GitHub files or persistent browser storage.
+- Run import preflight on every target before any write, preserve existing edited, paid or deleted month snapshots and existing private settings.
+- Repeated imports must safely skip already-added items and be restartable after a failed or interrupted upload.
+- Name-only items use an @ITEM catalog marker in their private TXT file, with no fabricated amount row, and appear in their category's Item dropdown.
 - Item is a dropdown filtered to the selected category, with Add new item for creating another item in that category.
 - Custom categories are valid user-named expense groups; do not allow custom names that conflict with reserved categories or commands.
 - The same item name may exist in different categories without mixing histories.
@@ -199,11 +210,13 @@ RECORDS / STORAGE
 - One plain UTF-8 .txt file per unique item, containing all applicable months.
 - No category subfolders and no separate file for each month.
 - Text lines are tab-separated, with YYYYMM month values.
+- @ITEM catalog markers and @SCHEDULE recurrence directives are metadata, not payment entries.
 - IN fields: MainCategory, Item, Month, Amount.
 - Saving fields: MainCategory, Item, Month, Added, Withdrawn, Balance.
 - Bills/Other fields: MainCategory, Item, Month, BillAmount, Paid, Unpaid.
 - Optional remark fields and Others retail/URL fields are compatible with legacy entries that lack these extras.
 - Private item settings are stored as append-only @META JSON directives inside the item's private TXT file; these directives are not money entries.
+- A private @META can enable hover display of the live unpaid remainder instead of hard-coding an outdated balance.
 - Only the latest valid @META for the same category and item is effective. Never write private notes, reminders, or financial amounts to public GitHub files.
 - A Savings @META access setting must be explicitly accessible before a withdrawal; the default is protected.
 - Recurring Bills metadata directives begin with @RECUR and are not financial rows; only valid Bills rules affect automatic month creation.
