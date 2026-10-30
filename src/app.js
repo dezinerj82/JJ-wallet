@@ -768,6 +768,10 @@ function updateOptionalFields() {
   addUrlField.hidden = !others;
   addRemarkField.hidden = false;
   addOptions.hidden = isWithdrawal;
+  if (!editingEntry) {
+    addHeading.textContent = isWithdrawal ? "Withdraw" : "Add item";
+    submitItemButton.textContent = isWithdrawal ? "Withdraw" : "Submit";
+  }
   document.getElementById("add-service-field").hidden = !service;
   document.getElementById("add-service-interval-field").hidden = !service;
   document.getElementById("add-remind-field").hidden = !service;
@@ -971,7 +975,7 @@ deleteItemButton.addEventListener("click", async () => {
   }
   if (previous.group === "Saving" || previous.month < currentMonth) return;
 
-  const confirmed = window.confirm("Are you sure?");
+  const confirmed = await confirmWallet("Are you sure?");
   if (!confirmed) return;
 
   const version = connectionVersion;
@@ -1029,19 +1033,35 @@ addForm.addEventListener("submit", async event => {
   setItemProgress(previous ? "Updating your item..." : "Saving your item...");
 
   try {
-    const payload = {
-      group: previous ? previous.group : addGroup.value,
-      item: previous ? previous.item : addName.value,
-      month: previous ? previous.month : addMonth.value.replace("-", ""),
-      amount: addAmount.value,
-      retail: addRetail.value,
-      url: addUrl.value,
-      remark: addRemark.value,
-      recurring: addGroup.value === "Bills" && addRecurring.checked
-    };
-    const result = previous
-      ? await updateWalletItem(getDriveToken(), activeFolderId, { ...payload, previous })
-      : await addWalletItem(getDriveToken(), activeFolderId, payload);
+    const group = previous ? previous.group : activeAddCategory();
+    const item = enteredItemName();
+    let result;
+    if (group === "Withdraw") {
+      if (!withdrawApproved) throw new Error("Select Withdraw again.");
+      const savings = entriesForMonth(walletEntries, currentMonth).Saving
+        .find(value => value.item === item);
+      if (!savings) throw new Error("Select accessible savings.");
+      result = await withdrawSavingItem(getDriveToken(), activeFolderId, {
+        item, previous: savings, amount: addAmount.value, remark: addRemark.value
+      });
+    } else {
+      if (addGroup.value === NEW_CATEGORY && !isCustomGroup(group)) {
+        throw new Error("Enter a valid category.");
+      }
+      const payload = {
+        group, item,
+        month: previous ? previous.month : addMonth.value.replace("-", ""),
+        amount: addAmount.value,
+        retail: addRetail.value,
+        url: addUrl.value,
+        remark: addRemark.value,
+        recurring: group === "Bills" && addRecurring.checked,
+        meta: enteredPrivateMeta(group, item)
+      };
+      result = previous
+        ? await updateWalletItem(getDriveToken(), activeFolderId, { ...payload, previous })
+        : await addWalletItem(getDriveToken(), activeFolderId, payload);
+    }
     if (version !== connectionVersion) return;
     expandedGroups.set(result.group, true);
     comparisonGroups.set(result.group, true);
