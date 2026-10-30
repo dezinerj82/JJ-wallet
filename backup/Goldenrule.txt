@@ -38,12 +38,18 @@ SAVING
 - A known opening savings balance can be stored as a private metadata value, separate from both saved deposits and planned monthly allocations.
 - An unknown savings opening balance remains unknown (display an em dash), never silently invent zero.
 - On each month view, calculate IN minus all Bills, Others and custom expense groups, and minus existing current-month recorded savings additions.
-- Automatically reduce ONLY uncommitted savings targets to fit the income remaining after those obligations, never below zero.
-- Distribute an affordable monthly savings budget proportionally across eligible savings targets, using exact cents and stable remainder allocation.
+- By default, every monthly savings target is fixed and must be kept even when the planning balance is negative.
+- The Savings settings form offers an explicit "Adjust when income is short" opt-in per savings item. Only opted-in, uncommitted targets are reduced, never below zero.
+- When several savings targets are opted in, distribute the affordable portion proportionally in integer cents.
+- Never reduce a fixed savings target, withdraw saved funds or pretend obligations have been paid.
 - If a savings item has a current-month ledger snapshot, treat its saved addition as already committed and do not create a second plan allocation for that item.
 - Show the saved balance unchanged, with a separate Save or Adjusted planned contribution beneath it. The monthly Balance includes the adjusted plan.
 - This adjustment is a forecast only: do not write a reduced saving into payment history, alter existing paid records, change purchases in Others or perform a withdrawal.
-- If income cannot cover non-savings spending or already committed savings, show the actual deficit: reducing planned savings cannot eliminate that shortfall.
+- When income cannot cover the bills, existing expenses and fixed savings, show the negative planned balance (warning-coloured bubble) instead of hiding or zeroing the deficit.
+- Mark only lower-priority unpaid Bills with a small red Hold suggestion in negative months; the ranks are private metadata, never shown in the website table.
+- Holding is advice only, never a change to the saved obligation. Ignore all recorded paid amounts, essential obligations and Others purchases when suggesting a Hold.
+- The Hold suggestion disappears automatically when extra income covers the deficit.
+- Allow negative forecasts to inform a later optional household income top-up, without inventing that income.
 - Recalculate individually for each month when records or targets change; do not overwrite other months.
 - Savings balances remain separate from ordinary spendable income.
 
@@ -67,9 +73,13 @@ BILLS
 - Others accepts new individual items, optional shop information, URL and remarks.
 - Multiple charges against an existing Others item accumulate under that same item.
 - Paid and unpaid portions are tracked; bills do not need ongoing account balances.
-- Any unpaid remainder carries to the following month under its original item/category.
-- If an existing group/item cannot be matched, place the carried item under Others.
-- Never count a carried amount twice or duplicate it when a new monthly charge is added.
+- Each current or overdue Bills/Others amount may be paid partially or fully through a Pay action. Save a verified append-only payment record in the original private item file.
+- For an overdue bill, a @PAY record references the original charge month and current payment month. Never modify locked old months.
+- Starting with the private setup period, render unsettled older obligations as carried views in later months. Do not create duplicate financial records.
+- Each carried obligation retains its original group, item and month identity for payment settlement.
+- A derived carried amount is counted once alongside the new month's charges, even when the same item has a separate new monthly charge.
+- Settlement payments reduce Unpaid in the current and later months, not retroactively in earlier displayed periods.
+- The Unpaid rounded bubble sits immediately left of Balance, includes all still-unpaid current and carried expense obligations, and updates on payment or refresh.
 
 SALARY / MONTHLY FORECAST
 - Salary is normally received on the last working day of the month.
@@ -81,7 +91,8 @@ SALARY / MONTHLY FORECAST
 - The implemented Balance uses the latest saved entries: IN minus Bills, Others, custom expenses, committed savings additions and the affordable portion of monthly savings targets.
 - Never report an artificial zero balance when obligations already exceed income.
 - Carried savings balances are never counted as spendable income or deducted again in later months.
-- Automatic unpaid carry-forward is not yet available, so the current Balance does not include unrecorded carried obligations.
+- Derived unpaid carry-forward is active from the initial import period; earlier confirmed cleared months are never counted again.
+- A carried bill is included in a later month's forecast once, and is removed from the later month's outstanding obligations when settled.
 - Recalculate the displayed Balance after successful Add, Update, Delete and Refresh, and display it in the primary table's selected currency using the same verified reference rate.
 - When records are incomplete or fail to load, do not show a misleading calculated amount.
 - Forecast is a planning estimate, NOT actual bank balance.
@@ -105,6 +116,9 @@ WALLET ACCESS PROCESS
 
 MAIN VIEW
 - One month-based consolidated table with collapsible groups and item details.
+- The Balance pill turns warning coral whenever its planned value is negative. Never replace a negative number with zero.
+- An adjacent Unpaid pill shows the unpaid current plus carried expenses in the main wallet currency.
+- Show Hold as a small red pill to the left of eligible optional bill names only when the selected month's budget is negative.
 - Display the former IN group as Income while preserving existing IN TXT records.
 - Place custom categories beneath the fixed groups and include their entries in expense totals.
 - Item-name hover/focus displays private notes in a floating tooltip without exposing them publicly or altering the Remark column.
@@ -131,6 +145,11 @@ ADD / EDIT / REMOVE FORM
 - Repeated imports must safely skip already-added items and be restartable after a failed or interrupted upload.
 - Name-only items use an @ITEM catalog marker in their private TXT file, with no fabricated amount row, and appear in their category's Item dropdown.
 - Item is a dropdown filtered to the selected category, with Add new item for creating another item in that category.
+- Download template creates a blank, reusable CSV. Import accepts CSV or earlier private JSON setup files.
+- CSV includes category/item/month, optional money, scheduling, savings targets, personal notes and private Hold ranking columns.
+- A blank or zero entry amount may create a name-only item without fabricating a financial record.
+- Validate the entire CSV before writing, check existing TXT histories, and append only missing months/settings to private Drive item files.
+- Keep private item values, rankings, names, hover notes, and real amounts out of GitHub and public process documents.
 - Custom categories are valid user-named expense groups; do not allow custom names that conflict with reserved categories or commands.
 - The same item name may exist in different categories without mixing histories.
 - More options allows editing private hover notes and optional service dates/reminder settings; these are separate from user Remarks.
