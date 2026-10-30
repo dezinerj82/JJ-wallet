@@ -58,16 +58,24 @@
         <h3 id="add-item-heading">Add item</h3>
         <form id="add-item-form" autocomplete="off">
           <div class="add-grid">
-            <label>Group
+            <label>Category
               <select id="add-item-group" required>
-                <option value="IN">IN</option>
+                <option value="IN">Income</option>
                 <option value="Saving" disabled>Saving (coming soon)</option>
                 <option value="Bills">Bills</option>
                 <option value="Others">Others</option>
+                <option value="Withdraw">Withdraw</option>
+                <option value="__new_category__">+ Add new category</option>
               </select>
             </label>
-            <label>Item
-              <input id="add-item-name" type="text" maxlength="120" required placeholder="Item name">
+            <label id="add-category-field" hidden>New category
+              <input id="add-category-name" type="text" maxlength="50" placeholder="Category name">
+            </label>
+            <label id="add-item-select-field">Item
+              <select id="add-item-select" required></select>
+            </label>
+            <label id="add-item-name-field" hidden>New item
+              <input id="add-item-name" type="text" maxlength="120" placeholder="Item name">
             </label>
             <label>Month
               <input id="add-item-month" type="month" required>
@@ -89,6 +97,32 @@
               <input id="add-item-remark" type="text" maxlength="300" placeholder="Add a note">
             </label>
           </div>
+          <details id="add-item-options" class="item-options" hidden>
+            <summary>More options</summary>
+            <div class="add-grid">
+              <label class="full-field">Hover note
+                <textarea id="add-item-hover-note" maxlength="1600" rows="3"></textarea>
+              </label>
+              <label id="add-service-field">Last service
+                <input type="month" id="add-last-service">
+              </label>
+              <label id="add-service-interval-field">Service every
+                <select id="add-service-interval">
+                  <option value="0">None</option>
+                  <option value="3">3 months</option>
+                  <option value="6">6 months</option>
+                  <option value="12">12 months</option>
+                </select>
+              </label>
+              <label id="add-remind-field">Remind before
+                <select id="add-remind-before">
+                  <option value="0">None</option>
+                  <option value="1">1 month</option>
+                  <option value="2">2 months</option>
+                </select>
+              </label>
+            </div>
+          </details>
           <p id="add-item-status" class="form-status" role="status" aria-live="polite"></p>
           <div id="item-progress" class="operation-progress" hidden>
             <p id="item-progress-text" class="operation-progress-text" aria-live="polite"></p>
@@ -100,6 +134,22 @@
               <button type="button" id="cancel-item-button">Cancel</button>
               <button type="submit" id="submit-item-button">Submit</button>
             </div>
+          </div>
+        </form>
+      </section>
+
+      <section id="saving-settings-panel" class="add-item-panel" hidden>
+        <h3>Savings settings</h3>
+        <form id="saving-settings-form">
+          <p id="saving-settings-name"></p>
+          <label class="setting-check"><input type="checkbox" id="saving-accessible"> Allow withdrawals</label>
+          <label class="setting-note">Hover note
+            <textarea id="saving-hover-note" maxlength="1600" rows="3"></textarea>
+          </label>
+          <p id="saving-settings-status" class="form-status" role="status"></p>
+          <div class="form-actions-right">
+            <button type="button" id="saving-settings-cancel">Cancel</button>
+            <button type="submit" id="saving-settings-save">Save</button>
           </div>
         </form>
       </section>
@@ -142,6 +192,14 @@
       </div>
     </section>
   </main>
+
+  <dialog id="wallet-dialog" class="wallet-dialog" aria-labelledby="wallet-dialog-text">
+    <p id="wallet-dialog-text">Are you sure?</p>
+    <div class="wallet-dialog-actions">
+      <button type="button" id="wallet-dialog-cancel">Cancel</button>
+      <button type="button" id="wallet-dialog-ok">OK</button>
+    </div>
+  </dialog>
 
   <section id="other-months-window" class="other-months-window" role="dialog" aria-modal="false" aria-labelledby="other-months-title" hidden>
     <div id="other-months-drag-handle" class="other-months-header" role="group" aria-label="Move the window using arrow keys" tabindex="0">
