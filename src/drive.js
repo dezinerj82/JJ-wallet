@@ -872,10 +872,16 @@ export async function withdrawSavingItem(token, folderId, selection) {
     throw new Error("Savings changed. Press Refresh.");
   }
   const originalCents = Math.round(last.balance * 100);
-  if (!Number.isSafeInteger(originalCents) || amountCents > originalCents) {
-    throw new Error("Not enough savings.");
-  }
   const thisMonth = last.month === month;
+  // Until payment completion is tracked, do not spend this month's
+  // potentially uncommitted savings additions.
+  const pendingCents = thisMonth ? Math.round(last.added * 100) : 0;
+  const availableCents = originalCents - pendingCents;
+  if (!Number.isSafeInteger(originalCents) ||
+      !Number.isSafeInteger(pendingCents) || pendingCents < 0 ||
+      amountCents > availableCents) {
+    throw new Error("Not enough confirmed savings.");
+  }
   const added = thisMonth ? last.added : 0;
   const withdrawn = (thisMonth ? last.withdrawn : 0) + amountCents / 100;
   const balance = (originalCents - amountCents) / 100;
