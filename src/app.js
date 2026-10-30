@@ -15,6 +15,7 @@ let selectingAccountRequired = false;
 let attemptedFastLogin = false;
 let signInReady = false;
 let editingEntry = null;
+let walletProgressTicket = 0;
 const expandedGroups = new Map(WALLET_GROUPS.map(group => [group, true]));
 
 const loginView = document.getElementById("login-view");
@@ -29,6 +30,10 @@ const logoutButton = document.getElementById("logout-button");
 
 const walletView = document.getElementById("wallet-view");
 const walletState = document.getElementById("wallet-state");
+const walletProgress = document.getElementById("wallet-progress");
+const walletProgressText = document.getElementById("wallet-progress-text");
+const itemProgress = document.getElementById("item-progress");
+const itemProgressText = document.getElementById("item-progress-text");
 const walletTableWrap = document.getElementById("wallet-table-wrap");
 const walletTableBody = document.getElementById("wallet-table-body");
 const monthLabel = document.getElementById("month-label");
@@ -82,8 +87,34 @@ function setWalletMessage(message, problem = false) {
   walletState.classList.toggle("wallet-message-error", problem);
 }
 
+function beginWalletProgress(message) {
+  const ticket = ++walletProgressTicket;
+  walletProgressText.textContent = message;
+  walletProgress.querySelector('[role="progressbar"]').setAttribute("aria-valuetext", message);
+  walletProgress.hidden = false;
+  return ticket;
+}
+
+function finishWalletProgress(ticket) {
+  if (ticket !== walletProgressTicket) return;
+  walletProgress.hidden = true;
+  walletProgressText.textContent = "";
+}
+
+function setItemProgress(message = "") {
+  itemProgress.hidden = !message;
+  itemProgressText.textContent = message;
+  if (message) {
+    itemProgress.querySelector('[role="progressbar"]').setAttribute("aria-valuetext", message);
+  }
+}
+
 function resetWallet() {
   connectionVersion++;
+  walletProgressTicket++;
+  walletProgress.hidden = true;
+  walletProgressText.textContent = "";
+  setItemProgress();
   activeFolderId = null;
   walletEntries = [];
   walletView.hidden = true;
@@ -97,6 +128,7 @@ function resetWallet() {
   addForm.reset();
   addButton.disabled = true;
   submitItemButton.disabled = false;
+  cancelItemButton.disabled = false;
   addStatus.textContent = "";
   setWalletMessage("");
   selectedMonth = currentMonth;
@@ -120,6 +152,7 @@ function showSignedIn() {
   loginView.hidden = true;
   walletView.hidden = false;
   setWalletMessage("Opening wallet...");
+  beginWalletProgress("Getting your wallet ready...");
   monthLabel.textContent = formatMonth(selectedMonth);
   prevButton.disabled = true;
 }
@@ -210,8 +243,8 @@ function renderMonth() {
         "Completed months and savings balances cannot be edited here";
       const pencil = document.createElementNS("http://www.w3.org/2000/svg", "svg");
       pencil.setAttribute("viewBox", "0 0 24 24");
-      pencil.setAttribute("width", "19");
-      pencil.setAttribute("height", "19");
+      pencil.setAttribute("width", "16");
+      pencil.setAttribute("height", "16");
       pencil.setAttribute("fill", "none");
       pencil.setAttribute("stroke", "currentColor");
       pencil.setAttribute("stroke-width", "2");
@@ -233,13 +266,15 @@ function renderMonth() {
   walletTableBody.replaceChildren(rows);
 }
 
-async function loadWalletRecords() {
+async function loadWalletRecords(message = "Refreshing your items...") {
   if (!activeFolderId) return;
   const version = connectionVersion;
   const folderId = activeFolderId;
+  const ticket = beginWalletProgress(message);
   walletView.hidden = false;
   walletTableWrap.hidden = true;
   refreshButton.disabled = true;
+  addButton.disabled = true;
   setWalletMessage("Loading items...");
 
   try {
@@ -263,12 +298,17 @@ async function loadWalletRecords() {
     walletTableWrap.hidden = true;
     setWalletMessage(error.message || "Could not read wallet records.", true);
   } finally {
-    if (version === connectionVersion) refreshButton.disabled = false;
+    finishWalletProgress(ticket);
+    if (version === connectionVersion) {
+      refreshButton.disabled = false;
+      addButton.disabled = !activeFolderId;
+    }
   }
 }
 
 async function onDriveReady() {
   const version = connectionVersion;
+  const ticket = beginWalletProgress("Connecting to your wallet...");
   try {
     const token = getDriveToken();
     if (!token) throw new Error("Drive session unavailable. Please sign out and sign in again.");
@@ -286,10 +326,12 @@ async function onDriveReady() {
     if (folder.name !== "Wallet bills") {
       setWalletMessage("Rename the connected Drive folder to Wallet bills.", true);
     }
-    await loadWalletRecords();
+    await loadWalletRecords("Loading your items...");
   } catch (error) {
     if (version !== connectionVersion) return;
-    setWalletMessage(error.message || "Google Drive could not be checked.", true);
+    setWalletMessage(error.message || "Couldn't open your wallet. Please try again.", true);
+  } finally {
+    finishWalletProgress(ticket);
   }
 }
 
@@ -307,6 +349,8 @@ function updateOptionalFields() {
 
 function closeAddPanel() {
   addPanel.hidden = true;
+  setItemProgress();
+  cancelItemButton.disabled = false;
   editingEntry = null;
   addHeading.textContent = "Add item";
   submitItemButton.textContent = "Submit";
@@ -374,7 +418,11 @@ addForm.addEventListener("submit", async event => {
   const version = connectionVersion;
   const previous = editingEntry;
   submitItemButton.disabled = true;
-  addStatus.textContent = previous ? "Updating..." : "Saving...";
+  cancelItemButton.disabled = true;
+  addButton.disabled = true;
+  refreshButton.disabled = true;
+  addStatus.textContent = "";
+  setItemProgress(previous ? "Updating your item..." : "Saving your item...");
 
   try {
     const payload = {
@@ -393,13 +441,19 @@ addForm.addEventListener("submit", async event => {
     selectedMonth = result.month;
     expandedGroups.set(result.group, true);
     closeAddPanel();
-    await loadWalletRecords();
+    await loadWalletRecords("Updating your list...");
   } catch (error) {
     if (version === connectionVersion) {
-      addStatus.textContent = error.message || "Could not save the item.";
+      addStatus.textContent = error.message || "Couldn't save your item. Please try again.";
     }
   } finally {
-    if (version === connectionVersion) submitItemButton.disabled = false;
+    if (version === connectionVersion) {
+      setItemProgress();
+      submitItemButton.disabled = false;
+      cancelItemButton.disabled = false;
+      addButton.disabled = !activeFolderId;
+      refreshButton.disabled = false;
+    }
   }
 });
 
