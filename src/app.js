@@ -8,11 +8,13 @@ import { csvTemplate, parseWalletCsv } from "./csv.js";
 import {
   WALLET_GROUPS, parseWalletFiles, entriesForMonth, calculateMonthlyPlan,
   calculatePastUnpaid, suggestedHolds,
-  monthKey, shiftedMonthKey, formatMonth, formatAmount
+  monthKey, shiftedMonthKey, formatMonth, formatAmount, effectiveUnpaid
 } from "./records.js";
 
 const TRUST_KEY = "home-wallet-remember-browser-v1";
 let currentMonth = monthKey(new Date());
+let monthLockNoticeShown = "";
+const MIN_LOCK_MONTH = "202610";
 let selectedMonth = currentMonth;
 let comparisonMonth = shiftedMonthKey(currentMonth, 1);
 let walletEntries = [];
@@ -325,6 +327,9 @@ const payAmount = document.getElementById("pay-item-amount");
 const payStatus = document.getElementById("pay-item-status");
 const payCancel = document.getElementById("pay-item-cancel");
 const paySave = document.getElementById("pay-item-save");
+const monthLockAlert = document.getElementById("month-lock-alert");
+const monthLockClose = document.getElementById("month-lock-close");
+monthLockClose.addEventListener("click", () => monthLockAlert.close());
 const walletDialog = document.getElementById("wallet-dialog");
 const walletDialogText = document.getElementById("wallet-dialog-text");
 const walletDialogCancel = document.getElementById("wallet-dialog-cancel");
@@ -458,6 +463,8 @@ function resetWallet() {
   setItemProgress();
   activeFolderId = null;
   walletEntries = [];
+  monthLockNoticeShown = "";
+  if (monthLockAlert.open) monthLockAlert.close();
   walletMetadata = new Map();
   walletCatalog = [];
   walletSchedules = [];
@@ -787,7 +794,7 @@ function renderTable(month, target, groupStates, fromComparison = false) {
         });
       }
       actionCell.append(editButton);
-      if (month === currentMonth && entry.group !== "IN" &&
+      if (month === selectedMonth && !fromComparison && entry.group !== "IN" &&
           entry.group !== "Saving" && entry.unpaid > 0) {
         const parts = entry.paymentParts || [entry];
         for (const part of parts) {
@@ -841,17 +848,32 @@ function renderBalance() {
   }
 }
 
+function earliestUnpaidMonth(calendarMonth) {
+  const outstanding = walletEntries.filter(entry =>
+    entry.group !== "IN" && entry.group !== "Saving" &&
+    !entry.catalogOnly && entry.month >= MIN_LOCK_MONTH &&
+    entry.month < calendarMonth &&
+    effectiveUnpaid(entry, calendarMonth) > 0
+  ).map(entry => entry.month);
+  return outstanding.length ? outstanding.sort()[0] : null;
+}
 function renderMonth() {
-  // Update the current month from the device date whenever the wallet refreshes.
-  const todayMonth = monthKey(new Date());
-  if (todayMonth !== currentMonth) {
-    currentMonth = todayMonth;
-    comparisonMonth = shiftedMonthKey(currentMonth, 1);
+  const calendarMonth = monthKey(new Date());
+  const locked = earliestUnpaidMonth(calendarMonth);
+  const displayMonth = locked || calendarMonth;
+  if (calendarMonth !== currentMonth || displayMonth !== selectedMonth) {
+    currentMonth = calendarMonth;
+    selectedMonth = displayMonth;
+    comparisonMonth = shiftedMonthKey(calendarMonth, 1);
   }
-  selectedMonth = currentMonth;
-  monthLabel.textContent = formatMonth(currentMonth);
-  renderTable(currentMonth, walletTableBody, expandedGroups);
+  monthLabel.textContent = formatMonth(selectedMonth);
+  renderTable(selectedMonth, walletTableBody, expandedGroups);
   renderBalance();
+  if (locked && walletBalanceReady && monthLockNoticeShown !== locked) {
+    monthLockNoticeShown = locked;
+    if (!monthLockAlert.open) monthLockAlert.showModal();
+  }
+  if (!locked && monthLockAlert.open) monthLockAlert.close();
 }
 
 function renderComparisonMonth() {
@@ -1270,7 +1292,7 @@ function closePayPanel() {
 }
 
 function openPayPanel(entry) {
-  if (!activeFolderId || !getDriveToken() || entry.month !== currentMonth) return;
+  if (!activeFolderId || !getDriveToken() || entry.month !== selectedMonth) return;
   closeAddPanel();
   closeSavingSettings();
   payingEntry = {...entry};
@@ -1449,7 +1471,7 @@ addButton.addEventListener("click", () => {
   addGroup.value = "IN";
   lastAddGroup = "IN";
   addMonth.min = currentMonth.slice(0, 4) + "-" + currentMonth.slice(4);
-  addMonth.value = selectedMonth.slice(0, 4) + "-" + selectedMonth.slice(4);
+  addMonth.value = currentMonth.slice(0, 4) + "-" + currentMonth.slice(4);
   updateOptionalFields();
   addStatus.textContent = "";
   addPanel.hidden = false;
