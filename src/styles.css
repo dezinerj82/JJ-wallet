@@ -1191,3 +1191,129 @@ h1 { border-bottom-color: #4ecdc4; }
 .wallet-unpaid-pill { background: #ffe66d; color: #59490e; }
 .wallet-balance-pill.balance-negative { background: #c74750; color: #fffafa; }
 .hold-badge { background: #ffe1df; border-color: #ffb6b6; color: #a63240; }
+
+/* Refined nine-color palette: white canvas, restrained sage accents. */
+:root {
+  --sapphire: #72b0ab;
+  --arctic: #bcdddc;
+  --lace: #ffedd1;
+  --bubblegum: #fdc1b4;
+  --ballet-slipper: #fe9179;
+  --sage: #cfb97e;
+  --pistachio: #b89d47;
+  --spruce: #355e58;
+  --peacock: #053229;
+  --paper: #ffffff;
+  --ink: #355e58;
+  --stormy-teal: #355e58;
+  --pearl-aqua: #72b0ab;
+  --alice-blue: #edf7f6;
+  --almond-silk: #ffedd1;
+  --tangerine-dream: #fe9179;
+  --sunshine-gold: #cfb97e;
+  --soft-indigo: #355e58;
+  --subtle-line: #dce9e6;
+  --soft-shadow: 0 5px 12px rgba(5,50,41,.10), 0 2px 4px rgba(5,50,41,.05);
+  background: #ffffff;
+  color: #355e58;
+}
+html, body { background: #ffffff; color: #355e58; }
+h1 { border-bottom-color: #bcdddc; }
+.brand-home { color: #053229; }
+.brand-wallet { color: #72b0ab; }
+#wallet-heading,
+.wallet-heading-row h2,
+.wallet-balance-pill:not(.balance-negative):not(.wallet-unpaid-pill) {
+  background: #355e58;
+  color: #ffffff;
+}
+#month-label, .wallet-table th, .wallet-table td { color: #355e58; }
+.wallet-table-wrap, .other-months-table-wrap,
+.wallet-table, .other-months-table,
+.wallet-table thead, .other-months-table thead,
+.add-item-panel, .hover-tooltip { background: #ffffff; }
+.wallet-table thead th, .other-months-table thead th { border-bottom-color: #355e58; }
+.month-nav { color: #355e58; }
+
+/* Page actions share a harmonious sage-teal hue, distinct from primary and category controls. */
+.wallet-actions button,
+.wallet-import-actions button,
+.wallet-actions #other-months-button,
+.wallet-actions #refresh-wallet-button,
+.wallet-actions #add-item-button,
+.wallet-actions #logout-button,
+.wallet-import-actions #wallet-download-template,
+.wallet-import-actions #wallet-setup-button {
+  --btn-bg: #72b0ab;
+  --btn-hover: #5c9e98;
+  --btn-text: #053229;
+}
+.wallet-actions #add-item-button {
+  --btn-bg: #cfb97e;
+  --btn-hover: #b89d47;
+  --btn-text: #053229;
+}
+.wallet-actions #logout-button {
+  --btn-bg: #fdc1b4;
+  --btn-hover: #f5aa9b;
+  --btn-text: #512b2c;
+}
+.wallet-import-actions #wallet-download-template {
+  --btn-bg: #bcdddc;
+  --btn-hover: #a8d3d0;
+  --btn-text: #053229;
+}
+.wallet-import-actions #wallet-setup-button {
+  --btn-bg: #72b0ab;
+  --btn-hover: #5c9e98;
+  --btn-text: #053229;
+}
+
+/* Category pills are very light pastels, softer than the main action controls. */
+.group-toggle, .group-in {
+  --btn-bg: #e4f3f1;
+  --btn-hover: #d5eae8;
+  --btn-text: #355e58;
+}
+.group-saving {
+  --btn-bg: #fff4e3;
+  --btn-hover: #ffedd1;
+  --btn-text: #655021;
+}
+.group-bills {
+  --btn-bg: #ffe9e4;
+  --btn-hover: #ffdad2;
+  --btn-text: #783e37;
+}
+.group-others, .group-custom {
+  --btn-bg: #f3eedf;
+  --btn-hover: #eae1c7;
+  --btn-text: #665628;
+}
+.wallet-unpaid-pill { background: #ffedd1; color: #655021; }
+.wallet-balance-pill.balance-negative { background: #bf4d42; color: #ffffff; }
+.hold-badge { background: #ffe8e2; border-color: #fdc1b4; color: #98453b; }
+.wallet-balance-warning, .saving-plan-adjusted { color: #a34b3d; }
+.pay-item-button {
+  --btn-bg: #bcdddc;
+  --btn-hover: #a8d3d0;
+  --btn-text: #053229;
+}
+#wallet-dialog-ok, #submit-item-button, #saving-settings-save, #pay-item-save {
+  --btn-bg: #cfb97e;
+  --btn-hover: #b89d47;
+  --btn-text: #053229;
+}
+#cancel-item-button, #saving-settings-cancel, #pay-item-cancel, #wallet-dialog-cancel {
+  --btn-bg: #bcdddc;
+  --btn-hover: #a8d3d0;
+  --btn-text: #053229;
+}
+#delete-item-button {
+  --btn-bg: #fe9179;
+  --btn-hover: #ea806a;
+  --btn-text: #41251f;
+}
+.wallet-dialog { background: #ffffff; color: #355e58; border-color: #bcdddc; }
+.hover-tooltip { color: #355e58; border-color: #bcdddc; }
+.currency-select { color: #355e58; border-color: #72b0ab; background: #ffffff; }
