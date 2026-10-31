@@ -1539,6 +1539,7 @@ function openPayPanel(entry) {
   if (!activeFolderId || !getDriveToken() || entry.month !== selectedMonth ||
       closedMonths.has(selectedMonth) || selectedMonth > monthKey(new Date())) return;
   closeAddPanel();
+  closeClearBillPanel();
   closeSavingSettings();
   payingEntry = {...entry};
   payName.textContent = entry.item +
@@ -1712,13 +1713,16 @@ addButton.addEventListener("click", () => {
   }
   closeAddPanel();
   closePayPanel();
+  closeClearBillPanel();
   savingsPanel.hidden = true;
   editingSavings = null;
   populateCategoryChoices();
   addGroup.value = "IN";
   lastAddGroup = "IN";
-  addMonth.min = currentMonth.slice(0, 4) + "-" + currentMonth.slice(4);
-  addMonth.value = currentMonth.slice(0, 4) + "-" + currentMonth.slice(4);
+  const addDefaultMonth = closedMonths.has(currentMonth)
+    ? shiftedMonthKey(currentMonth, 1) : currentMonth;
+  addMonth.min = addDefaultMonth.slice(0, 4) + "-" + addDefaultMonth.slice(4);
+  addMonth.value = addDefaultMonth.slice(0, 4) + "-" + addDefaultMonth.slice(4);
   updateOptionalFields();
   addStatus.textContent = "";
   addPanel.hidden = false;
