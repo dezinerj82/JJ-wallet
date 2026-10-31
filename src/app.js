@@ -1520,7 +1520,10 @@ clearBillForm.addEventListener("submit", async event => {
   } finally {
     clearBillSubmit.disabled = false;
     clearBillCancel.disabled = false;
-    if (version === connectionVersion) clearBillButton.disabled = false;
+    if (version === connectionVersion) {
+      clearBillButton.disabled = !walletBalanceComplete ||
+        closedMonths.has(selectedMonth) || selectedMonth > monthKey(new Date());
+    }
   }
 });
 
