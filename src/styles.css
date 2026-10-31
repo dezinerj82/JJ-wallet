@@ -1938,3 +1938,9 @@ h1 { border-bottom-color: #9dd5d7; }
   background: var(--btn-bg);
   color: var(--btn-text);
 }
+
+/* Current-month heading matches the Unpaid / Balance pill typography. */
+#wallet-heading #month-label {
+  font-size: clamp(1.12rem, 2.4vw, 1.5rem);
+  font-weight: 600;
+}
