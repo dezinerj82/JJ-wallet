@@ -135,15 +135,30 @@ function resetFrontDoor() {
   loginEmailNext.querySelector("span").textContent = "➜";
 }
 const loginEmailNext = document.getElementById("login-email-next");
+loginEmailForm.noValidate = true;
+function clearLoginFieldHint() {
+  loginEmail.removeAttribute("aria-invalid");
+  loginEmailForm.querySelector(".wallet-field-hint")?.remove();
+}
 loginEmail.addEventListener("input", () => {
+  clearLoginFieldHint();
   loginEmailForm.classList.remove("login-denied");
   loginEmailNext.querySelector("span").textContent = "➜";
 });
 loginEmailForm.addEventListener("submit", event => {
   event.preventDefault();
-  if (!loginEmail.reportValidity()) return;
   const entry = loginEmail.value.trim().toLowerCase();
-  if (!entry) return;
+  if (!entry) {
+    clearLoginFieldHint();
+    const hint = document.createElement("span");
+    hint.className = "wallet-field-hint";
+    hint.setAttribute("role", "alert");
+    hint.textContent = "Please enter your username or email.";
+    loginEmailForm.append(hint);
+    loginEmail.setAttribute("aria-invalid", "true");
+    loginEmail.focus();
+    return;
+  }
   // This quick first-layer check only controls the UI. Google verification
   // and the existing SHA-256 allowlist remain the actual access controls.
   let emailFingerprint = 2166136261;
