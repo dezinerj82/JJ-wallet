@@ -1899,3 +1899,24 @@ h1 { border-bottom-color: #9dd5d7; }
   height: 1.5rem;
   opacity: .72;
 }
+
+/* Match other floating wallet notices and the login validation bubble. */
+.wallet-dialog, .month-lock-alert {
+  border: 1px solid rgba(13, 102, 126, .09);
+  border-radius: 24px;
+  background: #ffffff;
+  color: #0d667e;
+  box-shadow: 0 14px 38px rgba(13, 65, 77, .14);
+  font-family: inherit;
+}
+#login-email-form > .wallet-field-hint {
+  display: flex;
+  margin: .75rem auto 0;
+  text-align: center;
+  justify-content: center;
+}
+#login-email[aria-invalid="true"] {
+  border-radius: 999px;
+  background: #fff9f9;
+  box-shadow: inset 0 0 0 1px rgba(233, 154, 155, .34);
+}
