@@ -1789,3 +1789,15 @@ h1 { border-bottom-color: #9dd5d7; }
 @media (prefers-reduced-motion: reduce) {
   .login-transition-success, .login-progress-fill { transition: none; }
 }
+
+/* Point directly to a form field needing correction. */
+#add-item-form .wallet-invalid-field,
+#add-item-form .wallet-invalid-field:focus {
+  border: 2px solid #df5263 !important;
+  outline: 2px solid rgba(223, 82, 99, .22);
+  outline-offset: 2px;
+  background-color: #fff3f5;
+}
+#add-item-form label:has(.wallet-invalid-field) {
+  color: #ad304c;
+}
