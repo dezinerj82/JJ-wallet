@@ -1481,6 +1481,26 @@ clearBillForm.addEventListener("submit", async event => {
   clearBillStatus.textContent = "";
   let completed = 0;
   try {
+    // Recheck Drive just before any writes so a newly added bill cannot
+    // be silently omitted from a month-close receipt.
+    const latest = parseWalletFiles(await readWalletTextFiles(getDriveToken(), activeFolderId));
+    if (latest.invalidLines || latest.closedMonths.includes(month)) {
+      throw new Error("Wallet changed. Refresh before clearing this month.");
+    }
+    const latestGroups = entriesForMonth(latest.entries, month);
+    const expected = new Set();
+    for (const group of availableGroups(latest.entries)) {
+      if (!isExpenseGroup(group)) continue;
+      for (const entry of latestGroups[group] || []) {
+        const origin = entry.carryOver ? entry.carryFrom : entry.month;
+        expected.add(JSON.stringify([group, entry.item.toLocaleLowerCase("en"), origin]));
+      }
+    }
+    const submitted = new Set(clearBillParts.map(entry =>
+      JSON.stringify([entry.group, entry.item.toLocaleLowerCase("en"), entry.carryFrom])));
+    if (expected.size !== submitted.size || [...expected].some(key => !submitted.has(key))) {
+      throw new Error("Bill list changed. Refresh and reopen Clear bill.");
+    }
     for (const payment of payments) {
       await recordBillPayment(getDriveToken(), activeFolderId,
         payment.entry, payment.amount);
@@ -1809,9 +1829,13 @@ addForm.addEventListener("submit", async event => {
       if (addGroup.value === NEW_CATEGORY && !isCustomGroup(group)) {
         throw new Error("Enter a valid category.");
       }
+      const itemMonth = previous ? previous.month : addMonth.value.replace("-", "");
+      if (closedMonths.has(itemMonth)) {
+        throw new Error("This month has already been cleared and cannot be edited.");
+      }
       const payload = {
         group, item,
-        month: previous ? previous.month : addMonth.value.replace("-", ""),
+        month: itemMonth,
         amount: addAmount.value,
         openingUnpaid: group === "Others" ? (addUnpaid.value || "0") : "0",
         retail: addRetail.value,
