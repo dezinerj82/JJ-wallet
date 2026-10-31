@@ -8,8 +8,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
   <link rel="icon" type="image/svg+xml" href="assets/favicon.svg?v=green-dollar-1">
-  <link rel="stylesheet" href="src/styles.css?v=20261031-signout13">
-  <script src="src/app.js?v=20261031-username14" type="module"></script>
+  <link rel="stylesheet" href="src/styles.css?v=20261031-loginmotion15">
+  <script src="src/app.js?v=20261031-loginmotion15" type="module"></script>
 </head>
 <body>
   <main id="app">
@@ -18,8 +18,9 @@
     <section id="login-view" class="front-door" aria-labelledby="login-heading">
       <div class="front-door-content">
         <h2 id="login-heading">Login to start</h2>
-        <div id="sign-in-actions">
-          <form id="login-email-form" class="front-door-email" autocomplete="on">
+        <div id="sign-in-actions" class="login-stage">
+          <button type="button" id="login-start-button" aria-controls="login-email-form" aria-expanded="false">Login to start</button>
+          <form id="login-email-form" class="login-form-closed" class="front-door-email" autocomplete="on">
             <label for="login-email">Username or email</label>
             <div class="front-door-input-wrap">
               <input id="login-email" type="text" autocomplete="username" placeholder="Type your username or email to login" required maxlength="254">
@@ -27,6 +28,7 @@
                 <span aria-hidden="true">➜</span>
               </button>
             </div>
+            <span class="login-confetti" aria-hidden="true"></span>
           </form>
         </div>
         <p id="setup-status" class="front-door-status visually-hidden" role="status" aria-live="polite"></p>
