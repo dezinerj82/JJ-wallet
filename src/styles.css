@@ -1823,3 +1823,12 @@ h1 { border-bottom-color: #9dd5d7; }
 .month-lock-alert::backdrop { background: rgba(15, 55, 67, .18); }
 .month-lock-alert p { margin: 0 0 1.2rem; font-weight: 650; }
 .month-lock-alert button { min-width: 7rem; }
+
+/* Three main wallet rows: equal vertical separation and restored table elevation. */
+#wallet-view > .wallet-table-wrap {
+  margin-top: 1.6rem;
+  box-shadow: 0 4px 12px rgba(13, 102, 126, .10), 0 2px 5px rgba(13, 102, 126, .05);
+}
+#wallet-view > .wallet-balance-row {
+  margin-top: 1.6rem;
+}
