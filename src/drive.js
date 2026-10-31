@@ -664,9 +664,17 @@ export async function updateWalletItem(token, folderId, changes) {
     throw new Error("Only Bills can repeat.");
   }
   const switchRule = item.group === "Bills" && wantsRecurring !== currentlyRecurring;
+  const newNote = String(changes?.meta?.note || "").trim();
+  const oldNote = String(priorMeta?.note || "").trim();
+  const combinedNote = [oldNote, newNote].filter(Boolean).join("\n");
+  if (combinedNote.length > 1600) {
+    throw new Error("Hover note is full. No changes were saved.");
+  }
   const newMeta = changes?.meta
-    ? buildMeta(item.group, item.item, {...(priorMeta || {}), ...changes.meta})
-    : priorMeta ? buildMeta(item.group, item.item) : null;
+    ? buildMeta(item.group, item.item, {
+        ...(priorMeta || {}), ...changes.meta, note: combinedNote
+      })
+    : priorMeta ? buildMeta(item.group, item.item, priorMeta) : null;
   const metaChanged = JSON.stringify(priorMeta) !== JSON.stringify(newMeta);
   const itemChanged = last.join("\t") !== revised.join("\t");
   if (!itemChanged && !switchRule && !metaChanged) {
