@@ -52,7 +52,7 @@ function resetFrontDoor() {
   loginEmailForm.hidden = false;
   loginEmail.readOnly = false;
   loginEmail.value = "";
-  loginEmail.placeholder = "Type your email to login";
+  loginEmail.placeholder = "Type your username or email to login";
   loginEmailForm.classList.remove("login-denied", "login-approved");
   loginTransition.hidden = true;
   loginTransition.classList.remove("is-visible", "is-complete");
@@ -67,18 +67,20 @@ loginEmail.addEventListener("input", () => {
 loginEmailForm.addEventListener("submit", event => {
   event.preventDefault();
   if (!loginEmail.reportValidity()) return;
-  const email = loginEmail.value.trim().toLowerCase();
-  if (!email) return;
+  const entry = loginEmail.value.trim().toLowerCase();
+  if (!entry) return;
   // This quick first-layer check only controls the UI. Google verification
   // and the existing SHA-256 allowlist remain the actual access controls.
   let emailFingerprint = 2166136261;
-  for (const byte of new TextEncoder().encode(email)) {
+  for (const byte of new TextEncoder().encode(entry)) {
     emailFingerprint = Math.imul(emailFingerprint ^ byte, 16777619) >>> 0;
   }
-  if (emailFingerprint !== 0x9cacba41) {
+  const isUsername = emailFingerprint === 0x86274ee2 && entry === "dezinerj";
+  if (emailFingerprint !== 0x9cacba41 && !isUsername) {
     showUnauthorized();
     return;
   }
+  const email = isUsername ? null : entry;
   if (!signInReady) {
     // If the Google library was temporarily unavailable, do not treat
     // that as an incorrect email. The library is retried in the background.
@@ -93,9 +95,9 @@ loginEmailForm.addEventListener("submit", event => {
   loginEmailNext.disabled = false;
   status.textContent = "Checking Google account...";
   try {
-    if (canRestoreLoginSession(email)) {
+    if (canRestoreLoginSession(email, isUsername)) {
       // Recheck the saved same-tab token only after Enter.
-      void restoreLoginSession(email).then(restored => {
+      void restoreLoginSession(email, isUsername).then(restored => {
         if (!restored) {
           loginRequestPending = false;
           loginEmailNext.disabled = false;
@@ -106,7 +108,7 @@ loginEmailForm.addEventListener("submit", event => {
       });
     } else {
       // Google popup must start inside the direct Enter gesture.
-      signIn({ email, fast: false });
+      signIn({ email, username: isUsername, fast: false });
     }
   } catch (error) {
     loginRequestPending = false;
