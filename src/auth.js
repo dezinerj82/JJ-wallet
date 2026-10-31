@@ -15,6 +15,7 @@ let accessToken = null;
 let expiresAt = 0;
 let signedInSubject = null;
 let handlers = null;
+let requestedEmail = "";
 
 async function isAuthorisedEmail(email) {
   const data = new TextEncoder().encode(String(email).trim().toLowerCase());
@@ -73,7 +74,8 @@ async function receiveLoginToken(response) {
   }
   try {
     const account = await getVerifiedAccount(response.access_token);
-    if (!(await isAuthorisedEmail(account.email))) {
+    if (account.email.trim().toLowerCase() !== requestedEmail ||
+        !(await isAuthorisedEmail(account.email))) {
       clearTokens();
       clearStoredSession();
       handlers.onUnauthorized(account.email);
@@ -168,9 +170,14 @@ export async function initialiseGoogleLogin(callbacks) {
   });
 }
 
-export function signIn({ fast = false } = {}) {
+export function signIn({ email, fast = false } = {}) {
   if (!tokenClient) throw new Error("Google sign-in is not ready.");
-  tokenClient.requestAccessToken({ prompt: fast ? "" : "select_account" });
+  requestedEmail = String(email || "").trim().toLowerCase();
+  if (!requestedEmail) throw new Error("Enter your email.");
+  tokenClient.requestAccessToken({
+    prompt: fast ? "" : "select_account",
+    login_hint: requestedEmail
+  });
 }
 
 export function getDriveToken() {
