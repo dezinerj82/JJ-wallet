@@ -1,5 +1,5 @@
 import { initialiseGoogleLogin, canRestoreLoginSession, restoreLoginSession, signIn, signOut, getDriveToken } from "./auth.js";
-import { findBillsFolder, readWalletTextFiles, addWalletItem, addWalletInstallments, updateWalletItem, deleteWalletItem, renewRecurringBills, renewScheduledItems, importWalletSetup, saveSavingSettings, withdrawSavingItem, recordBillPayment } from "./drive.js";
+import { findBillsFolder, readWalletTextFiles, addWalletItem, addWalletInstallments, updateWalletItem, deleteWalletItem, renewRecurringBills, renewScheduledItems, importWalletSetup, saveSavingSettings, withdrawSavingItem, recordBillPayment, closeWalletMonth } from "./drive.js";
 import { getMyrKrwRate, formatWalletCurrency, rateDateLabel } from "./currency.js";
 import { displayGroup, availableGroups, isExpenseGroup, isCustomGroup, NEW_CATEGORY, NEW_ITEM } from "./groups.js";
 import { buildMeta, parseAllMetadata, serviceReminders, effectiveServiceMonth, metaKey } from "./private-meta.js";
@@ -15,6 +15,7 @@ import { effectiveUnpaid } from "./settlement.js";
 const TRUST_KEY = "home-wallet-remember-browser-v1";
 let currentMonth = monthKey(new Date());
 let monthLockNoticeShown = "";
+let closedMonths = new Set();
 const MIN_LOCK_MONTH = "202610";
 let selectedMonth = currentMonth;
 let comparisonMonth = shiftedMonthKey(currentMonth, 1);
@@ -337,6 +338,14 @@ const savingsNote = document.getElementById("saving-hover-note");
 const savingsStatus = document.getElementById("saving-settings-status");
 const savingsCancel = document.getElementById("saving-settings-cancel");
 const savingsSave = document.getElementById("saving-settings-save");
+const clearBillButton = document.getElementById("clear-bill-button");
+const clearBillPanel = document.getElementById("clear-bill-panel");
+const clearBillForm = document.getElementById("clear-bill-form");
+const clearBillRows = document.getElementById("clear-bill-rows");
+const clearBillStatus = document.getElementById("clear-bill-status");
+const clearBillCancel = document.getElementById("clear-bill-cancel");
+const clearBillSubmit = document.getElementById("clear-bill-submit");
+let clearBillParts = [];
 const payPanel = document.getElementById("pay-item-panel");
 const payForm = document.getElementById("pay-item-form");
 const payName = document.getElementById("pay-item-name");
@@ -481,6 +490,9 @@ function resetWallet() {
   activeFolderId = null;
   walletEntries = [];
   monthLockNoticeShown = "";
+  closedMonths = new Set();
+  clearBillParts = [];
+  clearBillPanel.hidden = true;
   if (monthLockAlert.open) monthLockAlert.close();
   walletMetadata = new Map();
   walletCatalog = [];
@@ -890,38 +902,41 @@ function renderBalance() {
   }
 }
 
-function earliestUnpaidMonth(calendarMonth) {
-  const outstanding = walletEntries.filter(entry =>
-    isExpenseGroup(entry.group) &&
-    !entry.catalogOnly && entry.month >= MIN_LOCK_MONTH &&
-    entry.month < calendarMonth &&
-    effectiveUnpaid(entry, calendarMonth) > 0
-  ).map(entry => entry.month);
-  return outstanding.length ? outstanding.sort()[0] : null;
+function pendingCloseMonth(calendarMonth) {
+  const months = [...new Set(walletEntries.filter(entry =>
+    isExpenseGroup(entry.group) && !entry.catalogOnly &&
+    entry.month >= MIN_LOCK_MONTH && entry.month <= calendarMonth
+  ).map(entry => entry.month))].sort();
+  return months.find(month => !closedMonths.has(month)) || null;
 }
 function showMonthLockAlertIfNeeded() {
   if (!walletBalanceReady || walletView.hidden ||
       !loginLoadingEntered || !loginLoadingCompleted ||
       !loginTransition.hidden || monthLockAlert.open) return;
-  const locked = earliestUnpaidMonth(monthKey(new Date()));
-  if (locked && monthLockNoticeShown !== locked) {
-    monthLockNoticeShown = locked;
+  const calendarMonth = monthKey(new Date());
+  const pending = pendingCloseMonth(calendarMonth);
+  if (pending && pending < calendarMonth && monthLockNoticeShown !== pending) {
+    monthLockNoticeShown = pending;
     monthLockAlert.showModal();
   }
 }
 function renderMonth() {
   const calendarMonth = monthKey(new Date());
-  const locked = earliestUnpaidMonth(calendarMonth);
-  const displayMonth = locked || calendarMonth;
-  if (calendarMonth !== currentMonth || displayMonth !== selectedMonth) {
-    currentMonth = calendarMonth;
+  currentMonth = calendarMonth;
+  const pending = pendingCloseMonth(calendarMonth);
+  // After the current month's final confirmation, preview the next month.
+  const displayMonth = pending || (closedMonths.has(calendarMonth)
+    ? shiftedMonthKey(calendarMonth, 1) : calendarMonth);
+  if (displayMonth !== selectedMonth) {
     selectedMonth = displayMonth;
     comparisonMonth = shiftedMonthKey(calendarMonth, 1);
   }
   monthLabel.textContent = formatMonth(selectedMonth);
+  clearBillButton.disabled = !walletBalanceComplete ||
+    closedMonths.has(selectedMonth) || selectedMonth > calendarMonth;
   renderTable(selectedMonth, walletTableBody, expandedGroups);
   renderBalance();
-  if (!locked && monthLockAlert.open) monthLockAlert.close();
+  if ((!pending || pending >= calendarMonth) && monthLockAlert.open) monthLockAlert.close();
   showMonthLockAlertIfNeeded();
 }
 
@@ -996,6 +1011,7 @@ async function loadWalletRecords(message = "Refreshing your items...") {
     if (version !== connectionVersion || !getDriveToken()) return;
     const parsed = parseWalletFiles(files);
     walletEntries = parsed.entries;
+    closedMonths = new Set(parsed.closedMonths || []);
     walletCatalog = parsed.catalog;
     walletSchedules = parsed.schedules;
     walletMetadata = parseAllMetadata(files);
