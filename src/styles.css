@@ -1801,3 +1801,6 @@ h1 { border-bottom-color: #9dd5d7; }
 #add-item-form label:has(.wallet-invalid-field) {
   color: #ad304c;
 }
+
+/* The wallet heading is the current month; no separate month row. */
+#wallet-heading #month-label { color: inherit; width: auto; order: initial; }
