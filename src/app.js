@@ -1577,6 +1577,6 @@ function logout(event) {
   }
 }
 
-logoutButton.addEventListener("click", logout);
+document.getElementById("logout-button").addEventListener("click", logout);
 
 showSignedOut("");
