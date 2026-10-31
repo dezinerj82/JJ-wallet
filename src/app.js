@@ -1118,6 +1118,55 @@ function enteredItemName() {
     (addItemSelect.value === NEW_ITEM ? addName.value.trim() : addItemSelect.value);
 }
 
+function clearItemValidation() {
+  for (const control of addForm.querySelectorAll(".wallet-invalid-field")) {
+    control.classList.remove("wallet-invalid-field");
+    control.removeAttribute("aria-invalid");
+  }
+}
+function flagItemField(control, message) {
+  addOptions.open = true;
+  control.classList.add("wallet-invalid-field");
+  control.setAttribute("aria-invalid", "true");
+  addStatus.textContent = message;
+  control.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  control.focus({ preventScroll: true });
+}
+function validateItemDetails(group) {
+  clearItemValidation();
+  if (group === "IN" || group === "Saving" || group === "Withdraw") return true;
+  const serviceMonth = addLastService.value;
+  const interval = Number(addServiceInterval.value);
+  const reminder = Number(addRemindBefore.value);
+  if (serviceMonth && !interval) {
+    flagItemField(addServiceInterval, "Choose Service every, or clear Last service.");
+    return false;
+  }
+  if (interval && !serviceMonth) {
+    flagItemField(addLastService, "Select Last service to use Service every.");
+    return false;
+  }
+  if (reminder && !interval) {
+    flagItemField(addServiceInterval, "Choose Service every to set a reminder.");
+    return false;
+  }
+  return true;
+}
+addForm.addEventListener("input", event => {
+  if (event.target.classList?.contains("wallet-invalid-field")) {
+    event.target.classList.remove("wallet-invalid-field");
+    event.target.removeAttribute("aria-invalid");
+    addStatus.textContent = "";
+  }
+});
+addForm.addEventListener("change", event => {
+  if (event.target.classList?.contains("wallet-invalid-field")) {
+    event.target.classList.remove("wallet-invalid-field");
+    event.target.removeAttribute("aria-invalid");
+    addStatus.textContent = "";
+  }
+});
+
 function enteredPrivateMeta(group, item) {
   if (group === "Withdraw") return null;
   const service = group !== "IN" && group !== "Saving";
@@ -1145,6 +1194,7 @@ function fillPrivateMeta(meta) {
 }
 
 function closeAddPanel() {
+  clearItemValidation();
   addPanel.hidden = true;
   withdrawApproved = false;
   lastAddGroup = "IN";
@@ -1479,6 +1529,8 @@ addForm.addEventListener("submit", async event => {
     return;
   }
   if (!addForm.reportValidity()) return;
+  const validationGroup = editingEntry?.group || activeAddCategory();
+  if (!validateItemDetails(validationGroup)) return;
   const version = connectionVersion;
   const previous = editingEntry;
   submitItemButton.disabled = true;
@@ -1534,7 +1586,13 @@ addForm.addEventListener("submit", async event => {
     await loadWalletRecords("Updating your list...");
   } catch (error) {
     if (version === connectionVersion) {
-      addStatus.textContent = error.message || "Couldn't save your item. Please try again.";
+      if (error.message === "Check the item details.") {
+        if (!validateItemDetails(editingEntry?.group || activeAddCategory())) return;
+        addOptions.open = true;
+        flagItemField(addHoverNote, "Review the item details in More options.");
+      } else {
+        addStatus.textContent = error.message || "Couldn't save your item. Please try again.";
+      }
     }
   } finally {
     if (version === connectionVersion) {
