@@ -1287,6 +1287,37 @@ export async function recordBillPayment(token, folderId, previous, rawAmount) {
       (existing.text && !existing.text.endsWith("\n") ? "\n" : "") +
       fields.join("\t") + "\n";
   }
+  // Keep hover notes while any payment obligation for this item remains.
+  // Once all due months are fully settled, clear only the user note;
+  // append a metadata snapshot without altering any payment history.
+  const pendingByMonth = new Map();
+  const settledByMonth = new Map();
+  const itemKey = item.toLocaleLowerCase("en");
+  for (const line of expected.split("\n")) {
+    const fields = line.replace(/\r$/, "").split("\t");
+    if (fields[0] === group &&
+        String(fields[1] || "").toLocaleLowerCase("en") === itemKey &&
+        fields[2] <= current && /^(?:19|20|21)\d{2}(?:0[1-9]|1[0-2])$/.test(fields[2])) {
+      if (fields[3] === "DELETE") pendingByMonth.delete(fields[2]);
+      else if (fields.length >= 6) pendingByMonth.set(fields[2], Math.round(Number(fields[5]) * 100));
+    }
+    const payment = parsePaymentLine(line);
+    if (payment && payment.group === group &&
+        payment.item.toLocaleLowerCase("en") === itemKey &&
+        payment.paidMonth <= current) {
+      settledByMonth.set(payment.originMonth,
+        (settledByMonth.get(payment.originMonth) || 0) + Math.round(payment.amount * 100));
+    }
+  }
+  const stillDue = [...pendingByMonth.entries()].some(([dueMonth, cents]) =>
+    !Number.isSafeInteger(cents) || cents - (settledByMonth.get(dueMonth) || 0) > 0);
+  if (!stillDue) {
+    const priorMeta = lastMeta(expected, group, item);
+    if (priorMeta?.note?.trim()) {
+      const cleanMeta = buildMeta(group, item, { ...priorMeta, note: "" });
+      expected += metaLine(cleanMeta);
+    }
+  }
   if (new Blob([expected]).size > WRITE_LIMIT) {
     throw new Error("Item history is full.");
   }
