@@ -296,8 +296,8 @@ const addHoverNote = document.getElementById("add-item-hover-note");
 const addLastService = document.getElementById("add-last-service");
 const addServiceInterval = document.getElementById("add-service-interval");
 const addRemindBefore = document.getElementById("add-remind-before");
-const addRetailField = document.getElementById("add-retail-field");
-const addUrlField = document.getElementById("add-url-field");
+const addUnpaidField = document.getElementById("add-unpaid-field");
+const addUnpaid = document.getElementById("add-item-unpaid");
 const addRemarkField = document.getElementById("add-remark-field");
 const addRetail = document.getElementById("add-item-retail");
 const addUrl = document.getElementById("add-item-url");
@@ -1052,8 +1052,7 @@ function updateOptionalFields() {
   const scheduleManaged = Boolean(editingEntry?.scheduled);
   addRecurringField.hidden = !bills || isWithdrawal || scheduleManaged;
   if (!bills || scheduleManaged) addRecurring.checked = false;
-  addRetailField.hidden = !others;
-  addUrlField.hidden = !others;
+  addUnpaidField.hidden = !others;
   addRemarkField.hidden = false;
   addOptions.hidden = isWithdrawal;
   if (!editingEntry) {
@@ -1066,6 +1065,7 @@ function updateOptionalFields() {
   if (!others) {
     addRetail.value = "";
     addUrl.value = "";
+    addUnpaid.value = "";
   }
   if (isWithdrawal) {
     addMonth.value = currentMonth.slice(0,4) + "-" + currentMonth.slice(4);
@@ -1149,7 +1149,8 @@ function openUpdateForm(entry) {
   addMonth.min = currentMonth.slice(0, 4) + "-" + currentMonth.slice(4);
   addMonth.value = entry.month.slice(0, 4) + "-" + entry.month.slice(4);
   addMonth.disabled = true;
-  addAmount.value = String(entry.amount);
+  addAmount.value = String(Math.round((entry.amount - (entry.openingUnpaid || 0)) * 100) / 100);
+  addUnpaid.value = entry.openingUnpaid ? String(entry.openingUnpaid) : "";
   addRetail.value = entry.retail || "";
   addUrl.value = entry.url || "";
   addRemark.value = entry.remark || "";
@@ -1468,6 +1469,7 @@ addForm.addEventListener("submit", async event => {
         group, item,
         month: previous ? previous.month : addMonth.value.replace("-", ""),
         amount: addAmount.value,
+        openingUnpaid: group === "Others" ? (addUnpaid.value || "0") : "0",
         retail: addRetail.value,
         url: addUrl.value,
         remark: addRemark.value,
