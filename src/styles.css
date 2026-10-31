@@ -1667,3 +1667,12 @@ h1 { border-bottom-color: #9dd5d7; }
   background: #84ccaa;
   color: #164e3f;
 }
+
+/* Keep front door pinned to the start of the main content, no centered panel. */
+#login-view.front-door { margin-left: 0; margin-right: 0; }
+#login-view .front-door-content { margin-left: 0; margin-right: auto; }
+#login-view #sign-in-actions, #login-view #login-email-form { width: 100%; margin-left: 0; }
+#login-view #login-email-form.login-denied #login-email-next {
+  background: #df5263;
+  color: #ffffff;
+}
