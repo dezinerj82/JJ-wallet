@@ -1740,3 +1740,52 @@ h1 { border-bottom-color: #9dd5d7; }
 #login-view #login-email-form.login-approved #login-email-next{animation:login-approved-expand .65s cubic-bezier(.22,1,.36,1) both}
 @keyframes login-approved-expand{0%{transform:scale(1);border-radius:50%}52%{transform:scale(1.25);border-radius:50%}100%{transform:scale(1.14);border-radius:50%}}
 @media(prefers-reduced-motion:reduce){#login-view #login-email-form.login-approved #login-email-next{animation:none}}
+
+/* Wallet connection: actual milestones, with a final confirmation above the bar. */
+.login-transition {
+  background: #ffffff;
+  gap: 1rem;
+}
+.login-transition-success {
+  min-height: 7.6rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  gap: .35rem;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity .35s ease, transform .35s ease;
+}
+.login-transition.is-complete .login-transition-success {
+  opacity: 1;
+  transform: translateY(0);
+}
+.login-transition-success .login-transition-check {
+  width: 3.8rem;
+  height: 3.8rem;
+  font-size: 2.5rem;
+}
+.login-transition-success p {
+  margin: 0;
+  opacity: 1;
+}
+.login-progress-track {
+  position: relative;
+  width: min(78vw, 22rem);
+  height: .55rem;
+  border-radius: 999px;
+  background: rgba(157, 213, 215, .3);
+  overflow: hidden;
+}
+.login-progress-fill {
+  display: block;
+  height: 100%;
+  width: 0%;
+  border-radius: inherit;
+  background: #79cfa5;
+  transition: width .4s cubic-bezier(.22, 1, .36, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .login-transition-success, .login-progress-fill { transition: none; }
+}
