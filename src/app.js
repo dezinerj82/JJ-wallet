@@ -68,6 +68,16 @@ loginEmailForm.addEventListener("submit", event => {
   if (loginRequestPending || !signInReady || !loginEmail.reportValidity()) return;
   const email = loginEmail.value.trim().toLowerCase();
   if (!email) return;
+  // This quick first-layer check only controls the UI. Google verification
+  // and the existing SHA-256 allowlist remain the actual access controls.
+  let emailFingerprint = 2166136261;
+  for (const byte of new TextEncoder().encode(email)) {
+    emailFingerprint = Math.imul(emailFingerprint ^ byte, 16777619) >>> 0;
+  }
+  if (emailFingerprint !== 0x9cacba41) {
+    showUnauthorized();
+    return;
+  }
   loginRequestPending = true;
   loginEmailNext.disabled = true;
   status.textContent = "Checking Google account...";
