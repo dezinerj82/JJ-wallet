@@ -203,7 +203,7 @@ export function entriesForMonth(allEntries, month, asOf = new Date()) {
     for (const entry of allEntries) {
       // Do not assume a future month's bill will remain unpaid.
       if (!isExpenseGroup(entry.group) || entry.month >= month ||
-          entry.month >= today || entry.month < CARRY_START_MONTH ||
+          entry.month >= today || entry.month < "202610" ||
           !groups[entry.group]) continue;
       const amount = effectiveUnpaid(entry, month);
       if (amount <= 0) continue;
