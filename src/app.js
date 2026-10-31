@@ -12,7 +12,7 @@ import {
 } from "./records.js";
 
 const TRUST_KEY = "home-wallet-remember-browser-v1";
-const currentMonth = monthKey(new Date());
+let currentMonth = monthKey(new Date());
 let selectedMonth = currentMonth;
 let comparisonMonth = shiftedMonthKey(currentMonth, 1);
 let walletEntries = [];
@@ -842,7 +842,12 @@ function renderBalance() {
 }
 
 function renderMonth() {
-  // The main page always displays the current month.
+  // Update the current month from the device date whenever the wallet refreshes.
+  const todayMonth = monthKey(new Date());
+  if (todayMonth !== currentMonth) {
+    currentMonth = todayMonth;
+    comparisonMonth = shiftedMonthKey(currentMonth, 1);
+  }
   selectedMonth = currentMonth;
   monthLabel.textContent = formatMonth(currentMonth);
   renderTable(currentMonth, walletTableBody, expandedGroups);
