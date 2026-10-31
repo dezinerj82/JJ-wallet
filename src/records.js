@@ -75,6 +75,7 @@ export function parseWalletFiles(files) {
   const directory = new Map();
   const schedules = new Map();
   const payments = new Map();
+  const closedMonths = new Set();
   let validLines = 0;
   let invalidLines = 0;
 
@@ -86,6 +87,14 @@ export function parseWalletFiles(files) {
 
     for (const line of file.content.split("\n")) {
       if (!line.trim()) continue;
+      if (file.name === "wallet-month-close.txt") {
+        const fields = line.replace(/\r$/, "").split("\t");
+        if (fields.length === 2 && fields[0] === "@CLOSE" &&
+            /^(?:19|20|21)\d{2}(?:0[1-9]|1[0-2])$/.test(fields[1])) {
+          closedMonths.add(fields[1]); validLines++;
+        } else invalidLines++;
+        continue;
+      }
       if (line.startsWith("@PAY\t")) {
         const event = parsePaymentLine(line);
         if (event) {
@@ -173,6 +182,7 @@ export function parseWalletFiles(files) {
         entry.group, entry.item.toLocaleLowerCase("en"), entry.month
       ])) || []
     })),
+    closedMonths: [...closedMonths],
     catalog: [...directory.values()],
     schedules: [...schedules.values()],
     validLines, invalidLines
