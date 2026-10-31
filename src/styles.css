@@ -1676,3 +1676,36 @@ h1 { border-bottom-color: #9dd5d7; }
   background: #df5263;
   color: #ffffff;
 }
+
+/* Restore Other months to the standard, static wallet action button. */
+.wallet-actions #other-months-button,
+.wallet-actions #other-months-button:hover:not(:disabled),
+.wallet-actions #other-months-button:focus-visible,
+.wallet-actions #other-months-button:active:not(:disabled) {
+  position: static;
+  isolation: auto;
+  overflow: visible;
+  transform: none;
+  padding: .53rem 1.05rem;
+  box-shadow: 0 2px 7px rgba(13, 102, 126, .12);
+  color: var(--btn-text);
+  transition: background-color .18s ease;
+}
+.wallet-actions #other-months-button {
+  background: var(--btn-bg);
+}
+.wallet-actions #other-months-button:hover:not(:disabled),
+.wallet-actions #other-months-button:focus-visible {
+  background: var(--btn-hover);
+}
+.wallet-actions #other-months-button:active:not(:disabled) {
+  background: var(--btn-bg);
+}
+.wallet-actions #other-months-button::before,
+.wallet-actions #other-months-button::after {
+  content: none;
+  display: none;
+}
+@media (max-width: 600px) {
+  .wallet-actions #other-months-button { padding: .55rem .85rem; }
+}
