@@ -1429,3 +1429,44 @@ h1 { border-bottom-color: #9dd5d7; }
 
 /* Match the ID-level heading rule and balance with one shared color. */
 #wallet-heading, #wallet-balance:not(.balance-negative) { background-color: #0d667e; color: #ffffff; }
+
+/* Trial: Other months line-to-underline hover. */
+.wallet-actions #other-months-button {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background: transparent;
+  color: #0d667e;
+  padding-left: 1.35rem;
+}
+.wallet-actions #other-months-button::before {
+  content: "";
+  position: absolute;
+  left: .48rem;
+  top: 50%;
+  width: 3px;
+  height: 1.2rem;
+  border-radius: 999px;
+  background: #9dd5d7;
+  transform: translateY(-50%);
+  transition: left 360ms ease, top 360ms ease,
+              width 360ms ease, height 360ms ease,
+              transform 360ms ease, background-color 360ms ease;
+}
+.wallet-actions #other-months-button:hover:not(:disabled),
+.wallet-actions #other-months-button:focus-visible {
+  background: #e7f4f5;
+  color: #0d667e;
+}
+.wallet-actions #other-months-button:hover:not(:disabled)::before,
+.wallet-actions #other-months-button:focus-visible::before {
+  left: .65rem;
+  top: calc(100% - .32rem);
+  width: calc(100% - 1.3rem);
+  height: 3px;
+  transform: translateY(0);
+  background: #9dd5d7;
+}
+@media (prefers-reduced-motion: reduce) {
+  .wallet-actions #other-months-button::before { transition: none; }
+}
