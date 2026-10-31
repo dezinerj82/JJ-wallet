@@ -1,5 +1,5 @@
 import { initialiseGoogleLogin, canRestoreLoginSession, restoreLoginSession, signIn, signOut, getDriveToken } from "./auth.js";
-import { findBillsFolder, readWalletTextFiles, addWalletItem, updateWalletItem, deleteWalletItem, renewRecurringBills, renewScheduledItems, importWalletSetup, saveSavingSettings, withdrawSavingItem, recordBillPayment } from "./drive.js";
+import { findBillsFolder, readWalletTextFiles, addWalletItem, addWalletInstallments, updateWalletItem, deleteWalletItem, renewRecurringBills, renewScheduledItems, importWalletSetup, saveSavingSettings, withdrawSavingItem, recordBillPayment } from "./drive.js";
 import { getMyrKrwRate, formatWalletCurrency, rateDateLabel } from "./currency.js";
 import { displayGroup, availableGroups, isCustomGroup, NEW_CATEGORY, NEW_ITEM } from "./groups.js";
 import { buildMeta, parseAllMetadata, serviceReminders, effectiveServiceMonth, metaKey } from "./private-meta.js";
@@ -298,6 +298,8 @@ const addServiceInterval = document.getElementById("add-service-interval");
 const addRemindBefore = document.getElementById("add-remind-before");
 const addUnpaidField = document.getElementById("add-unpaid-field");
 const addUnpaid = document.getElementById("add-item-unpaid");
+const addInstallmentField = document.getElementById("add-installment-field");
+const addInstallment = document.getElementById("add-item-installment");
 const addRemarkField = document.getElementById("add-remark-field");
 const addRetail = document.getElementById("add-item-retail");
 const addUrl = document.getElementById("add-item-url");
@@ -1053,6 +1055,8 @@ function updateOptionalFields() {
   addRecurringField.hidden = !bills || isWithdrawal || scheduleManaged;
   if (!bills || scheduleManaged) addRecurring.checked = false;
   addUnpaidField.hidden = !others;
+  addInstallmentField.hidden = !others || Boolean(editingEntry);
+  if (editingEntry) addInstallment.value = "";
   addRemarkField.hidden = false;
   addOptions.hidden = isWithdrawal;
   if (!editingEntry) {
@@ -1066,6 +1070,7 @@ function updateOptionalFields() {
     addRetail.value = "";
     addUrl.value = "";
     addUnpaid.value = "";
+    addInstallment.value = "";
   }
   if (isWithdrawal) {
     addMonth.value = currentMonth.slice(0,4) + "-" + currentMonth.slice(4);
@@ -1476,9 +1481,16 @@ addForm.addEventListener("submit", async event => {
         recurring: group === "Bills" && addRecurring.checked,
         meta: enteredPrivateMeta(group, item)
       };
+      const months = group === "Others" && !previous && addInstallment.value.trim()
+        ? Number(addInstallment.value) : 1;
+      if (!Number.isInteger(months) || months < 1 || months > 120) {
+        throw new Error("Installment must be between 1 and 120 months.");
+      }
       result = previous
         ? await updateWalletItem(getDriveToken(), activeFolderId, { ...payload, previous })
-        : await addWalletItem(getDriveToken(), activeFolderId, payload);
+        : months > 1
+          ? await addWalletInstallments(getDriveToken(), activeFolderId, payload, months)
+          : await addWalletItem(getDriveToken(), activeFolderId, payload);
     }
     if (version !== connectionVersion) return;
     expandedGroups.set(result.group, true);
