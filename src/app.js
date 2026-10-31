@@ -872,7 +872,8 @@ function earliestUnpaidMonth(calendarMonth) {
   return outstanding.length ? outstanding.sort()[0] : null;
 }
 function showMonthLockAlertIfNeeded() {
-  if (!walletBalanceReady || !walletView || walletView.hidden ||
+  if (!walletBalanceReady || walletView.hidden ||
+      !loginLoadingEntered || !loginLoadingCompleted ||
       !loginTransition.hidden || monthLockAlert.open) return;
   const locked = earliestUnpaidMonth(monthKey(new Date()));
   if (locked && monthLockNoticeShown !== locked) {
