@@ -1771,20 +1771,16 @@ h1 { border-bottom-color: #9dd5d7; }
   opacity: 1;
 }
 .login-progress-track {
-  position: relative;
-  width: min(78vw, 22rem);
-  height: .55rem;
-  border-radius: 999px;
-  background: rgba(157, 213, 215, .3);
-  overflow: hidden;
+  width: min(78vw, 35rem);
 }
 .login-progress-fill {
-  display: block;
-  height: 100%;
-  width: 0%;
-  border-radius: inherit;
-  background: #79cfa5;
-  transition: width .4s cubic-bezier(.22, 1, .36, 1);
+  /* Inherit the same indefinite sliding motion and colors as wallet Refresh. */
+}
+.login-transition.is-complete .login-progress-fill {
+  animation: none;
+  left: 0;
+  transform: none;
+  width: 100%;
 }
 @media (prefers-reduced-motion: reduce) {
   .login-transition-success, .login-progress-fill { transition: none; }
@@ -1831,4 +1827,75 @@ h1 { border-bottom-color: #9dd5d7; }
 }
 #wallet-view > .wallet-balance-row {
   margin-top: 1.6rem;
+}
+
+/* Consistent soft-edged validation across wallet entry forms. */
+#add-item-form .wallet-invalid-field,
+#add-item-form .wallet-invalid-field:focus,
+#pay-item-form .wallet-invalid-field,
+#pay-item-form .wallet-invalid-field:focus,
+#saving-settings-form .wallet-invalid-field,
+#saving-settings-form .wallet-invalid-field:focus {
+  border: 1px solid #e99a9b !important;
+  border-radius: 15px;
+  outline: 0;
+  background: #fff9f9;
+  box-shadow: 0 0 0 3px rgba(233, 154, 155, .16), 0 3px 10px rgba(13, 102, 126, .06);
+}
+.wallet-field-hint {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  max-width: 100%;
+  margin: .3rem 0 .2rem;
+  padding: .6rem .95rem;
+  border: 0;
+  border-radius: 22px;
+  background: #fff4f3;
+  color: #9d4653;
+  box-shadow: 0 4px 16px rgba(66, 63, 72, .11);
+  line-height: 1.45;
+  font-family: inherit;
+  font-size: .89rem;
+  font-weight: 500;
+}
+.add-item-panel .form-status:not(:empty) {
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  padding: .52rem .85rem;
+  border-radius: 18px;
+  background: #fff4f3;
+  color: #9d4653;
+  box-shadow: 0 3px 12px rgba(66, 63, 72, .08);
+  font-family: inherit;
+  font-weight: 500;
+}
+.add-item-panel:has(.wallet-field-hint) .form-status:not(:empty) {
+  /* Avoid repeating field feedback in two visible bubbles. */
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+#add-item-form input[type="month"],
+#add-item-options input[type="month"] {
+  min-height: 3.45rem;
+  padding: .7rem 1rem;
+  border-radius: 16px;
+  border: 1px solid #d8e9e7;
+  background: #ffffff;
+  box-shadow: 0 3px 12px rgba(13, 102, 126, .07);
+  font-family: inherit;
+  font-size: 1.12rem;
+  color: #0d667e;
+  color-scheme: light;
+}
+#add-item-form input[type="month"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  width: 1.5rem;
+  height: 1.5rem;
+  opacity: .72;
 }
