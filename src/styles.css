@@ -1652,3 +1652,18 @@ h1 { border-bottom-color: #9dd5d7; }
   #login-view .front-door-input-wrap { gap: .55rem; }
   #login-view .front-door-input-wrap input { padding-inline: .85rem; font-size: .92rem; }
 }
+
+/* Email gate: existing Google verification remains authoritative. */
+#login-email-next:disabled { opacity: .55; }
+#login-email-form.login-denied #login-email-next {
+  background: #df5263;
+  color: #ffffff;
+}
+#login-email-form.login-denied #login-email {
+  color: #9e344e;
+}
+#login-email-form.login-denied #login-email::placeholder { color: #9e344e; }
+#login-email-form.login-approved #login-email-next {
+  background: #84ccaa;
+  color: #164e3f;
+}
