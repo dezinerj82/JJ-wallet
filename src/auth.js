@@ -116,8 +116,10 @@ function loadGoogleLibrary() {
     script.async = true;
     script.onload = () => window.google?.accounts?.oauth2
       ? resolve() : reject(new Error("Google sign-in library is unavailable."));
-    script.onerror = () =>
+    script.onerror = () => {
+      script.remove();
       reject(new Error("Could not load Google sign-in. Check your connection."));
+    };
     document.head.append(script);
   });
 }
