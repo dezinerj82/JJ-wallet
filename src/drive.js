@@ -481,6 +481,74 @@ export async function addWalletItem(token, folderId, entry) {
 }
 
 
+
+export async function addWalletInstallments(token, folderId, entry, months) {
+  if (!token || !folderId || entry?.group !== "Others" ||
+      !Number.isInteger(months) || months < 2 || months > 120) {
+    throw new Error("Invalid installment request.");
+  }
+  const base = validateEntry(entry);
+  const totalCents = Math.round(Number(entry.amount) * 100);
+  if (!Number.isSafeInteger(totalCents) || totalCents < months) {
+    throw new Error("Amount must cover at least RM0.01 each month.");
+  }
+  const regular = Math.floor(totalCents / months);
+  const remainder = totalCents % months;
+  const y = Number(base.month.slice(0, 4));
+  const m = Number(base.month.slice(4, 6));
+  const rows = [];
+  for (let i = 0; i < months; i++) {
+    const date = new Date(Date.UTC(y, m - 1 + i, 1));
+    if (date.getUTCFullYear() > 2199) throw new Error("Installment date outside supported range.");
+    const month = String(date.getUTCFullYear()) +
+      String(date.getUTCMonth() + 1).padStart(2, "0");
+    const cents = regular + (i >= months - remainder ? 1 : 0);
+    rows.push(validateEntry({
+      ...entry, month, amount: (cents / 100).toFixed(2),
+      openingUnpaid: i === 0 ? entry.openingUnpaid : "0"
+    }));
+  }
+  const filename = await itemFileName(base.group, base.item);
+  const files = await listWalletFileMetadata(token, folderId);
+  const matching = [];
+  for (const file of files) {
+    if (Number(file.size || 0) > WRITE_LIMIT) throw new Error("Item file is too large.");
+    const content = await getFileText(token, file.id);
+    if (new Blob([content]).size > WRITE_LIMIT) throw new Error("Item history is too large.");
+    if (file.name === filename || fileHasItem(content, base.group, base.item)) {
+      matching.push({ file, content });
+    }
+  }
+  if (matching.length > 1) throw new Error("Duplicate item files. No installments saved.");
+  const existing = matching[0];
+  if (existing && (existing.file.appProperties?.purpose !== ITEM_MARKER ||
+      !fileHasItem(existing.content, base.group, base.item))) {
+    throw new Error("Item file needs review. No installments saved.");
+  }
+  if (existing && rows.some(row =>
+      monthIsPresent(existing.content, row.group, row.item, row.month))) {
+    throw new Error("Installment month already exists. No changes saved.");
+  }
+  const meta = entry?.meta ? metaLine(buildMeta(base.group, base.item, entry.meta)) : "";
+  const previous = existing?.content || "";
+  const expected = previous + (previous && !previous.endsWith("\n") ? "\n" : "") +
+    rows.map(row => row.line).join("") + meta;
+  if (new Blob([expected]).size > WRITE_LIMIT) {
+    throw new Error("Installment schedule is too large.");
+  }
+  let id;
+  if (existing) {
+    await replaceWalletText(token, existing.file.id, expected);
+    id = existing.file.id;
+  } else {
+    id = (await createWalletTextFile(token, folderId, filename, expected)).id;
+  }
+  if (await getFileText(token, id) !== expected) {
+    throw new Error("Installment save could not be verified. Check Drive before retrying.");
+  }
+  return { group: base.group, item: base.item, month: base.month };
+}
+
 // Updates append a complete replacement snapshot for the same item/month.
 // Historical lines are never edited or removed. The existing paid amount is
 // preserved and the unpaid amount is recalculated from the revised bill amount.
