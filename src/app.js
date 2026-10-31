@@ -7,7 +7,7 @@ import { plannedAlerts, validateSetupPayload } from "./setup.js";
 import { csvTemplate, parseWalletCsv } from "./csv.js";
 import {
   WALLET_GROUPS, parseWalletFiles, entriesForMonth, calculateMonthlyPlan,
-  calculateUnpaidForMonth, suggestedHolds,
+  calculatePastUnpaid, suggestedHolds,
   monthKey, shiftedMonthKey, formatMonth, formatAmount
 } from "./records.js";
 
@@ -825,8 +825,8 @@ function renderBalance() {
   try {
     const plan = calculateMonthlyPlan(walletEntries, currentMonth);
     walletBalanceOutput.classList.toggle("balance-negative", plan.balance < 0);
-    const unpaid = calculateUnpaidForMonth(walletEntries,currentMonth);
-    walletUnpaidOutput.hidden = unpaid <= 0;
+    const unpaid = calculatePastUnpaid(walletEntries, currentMonth);
+    walletUnpaidOutput.hidden = false;
     walletUnpaidAmount.textContent = formatWalletCurrency(
       unpaid,displayCurrencies.main,referenceRate
     );
