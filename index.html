@@ -8,8 +8,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&amp;family=Google+Sans:wght@400;500;600;700&amp;family=Roboto:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
   <link rel="icon" type="image/svg+xml" href="assets/favicon.svg?v=green-dollar-1">
-  <link rel="stylesheet" href="src/styles.css?v=20261031-font16">
-  <script src="src/app.js?v=20261031-loginmotion15" type="module"></script>
+  <link rel="stylesheet" href="src/styles.css?v=20261031-progress17">
+  <script src="src/app.js?v=20261031-progress17" type="module"></script>
 </head>
 <body>
   <main id="app">
@@ -20,8 +20,7 @@
         <h2 id="login-heading">Login to start</h2>
         <div id="sign-in-actions" class="login-stage">
           <button type="button" id="login-start-button" aria-controls="login-email-form" aria-expanded="false">Login to start</button>
-          <form id="login-email-form" class="login-form-closed" class="front-door-email" autocomplete="on">
-            <label for="login-email">Username or email</label>
+          <form id="login-email-form" class="front-door-email login-form-closed" autocomplete="on">
             <div class="front-door-input-wrap">
               <input id="login-email" type="text" autocomplete="username" placeholder="Type your username or email to login" required maxlength="254">
               <button type="submit" id="login-email-next" aria-label="Enter">
@@ -35,8 +34,13 @@
       </div>
     </section>
     <div id="login-transition" class="login-transition" hidden aria-live="polite">
-      <div class="login-transition-check" aria-hidden="true">✓</div>
-      <p>Connected</p>
+      <div class="login-transition-success" aria-hidden="true">
+        <div class="login-transition-check">✓</div>
+        <p>Connected</p>
+      </div>
+      <div id="login-progress-track" class="login-progress-track" role="progressbar" aria-label="Connecting to wallet" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+        <span id="login-progress-fill" class="login-progress-fill"></span>
+      </div>
     </div>
 
     <section id="wallet-view" aria-labelledby="wallet-heading" hidden>
