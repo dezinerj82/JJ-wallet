@@ -1,4 +1,4 @@
-import { initialiseGoogleLogin, signIn, signOut, getDriveToken } from "./auth.js";
+import { initialiseGoogleLogin, canRestoreLoginSession, restoreLoginSession, signIn, signOut, getDriveToken } from "./auth.js";
 import { findBillsFolder, readWalletTextFiles, addWalletItem, updateWalletItem, deleteWalletItem, renewRecurringBills, renewScheduledItems, importWalletSetup, saveSavingSettings, withdrawSavingItem, recordBillPayment } from "./drive.js";
 import { getMyrKrwRate, formatWalletCurrency, rateDateLabel } from "./currency.js";
 import { displayGroup, availableGroups, isCustomGroup, NEW_CATEGORY, NEW_ITEM } from "./groups.js";
@@ -72,9 +72,21 @@ loginEmailForm.addEventListener("submit", event => {
   loginEmailNext.disabled = true;
   status.textContent = "Checking Google account...";
   try {
-    // The popup must be requested directly from the Enter user gesture.
-    // The email hint selects the intended account; Google still verifies identity.
-    signIn({ email, fast: false });
+    if (canRestoreLoginSession(email)) {
+      // Recheck the saved same-tab token only after Enter.
+      void restoreLoginSession(email).then(restored => {
+        if (!restored) {
+          loginRequestPending = false;
+          loginEmailNext.disabled = false;
+          loginEmail.value = "";
+          loginEmail.placeholder = "Try again";
+          status.textContent = "";
+        }
+      });
+    } else {
+      // Google popup must start inside the direct Enter gesture.
+      signIn({ email, fast: false });
+    }
   } catch (error) {
     loginRequestPending = false;
     loginEmailNext.disabled = false;
@@ -1489,7 +1501,7 @@ logoutButton.addEventListener("click", logout);
 
 try {
   await initialiseGoogleLogin({
-    shouldRememberSession: () => false,
+    shouldRememberSession: () => true,
     onSignedIn: showSignedIn,
     onUnauthorized: showUnauthorized,
     onError: () => {
