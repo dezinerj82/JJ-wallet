@@ -1,4 +1,4 @@
-import { initialiseGoogleLogin, restoreLoginSession, signIn, signOut, getDriveToken } from "./auth.js";
+import { initialiseGoogleLogin, signIn, signOut, getDriveToken } from "./auth.js";
 import { findBillsFolder, readWalletTextFiles, addWalletItem, updateWalletItem, deleteWalletItem, renewRecurringBills, renewScheduledItems, importWalletSetup, saveSavingSettings, withdrawSavingItem, recordBillPayment } from "./drive.js";
 import { getMyrKrwRate, formatWalletCurrency, rateDateLabel } from "./currency.js";
 import { displayGroup, availableGroups, isCustomGroup, NEW_CATEGORY, NEW_ITEM } from "./groups.js";
@@ -20,9 +20,7 @@ let walletBalanceReady = false;
 let walletBalanceComplete = false;
 let activeFolderId = null;
 let connectionVersion = 0;
-let selectingAccountRequired = false;
-let attemptedFastLogin = false;
-let signInReady = false;
+let let let signInReady = false;
 let editingEntry = null;
 let editingSavings = null;
 let payingEntry = null;
@@ -43,41 +41,47 @@ const comparisonGroups = new Map(WALLET_GROUPS.map(group => [group, true]));
 
 const loginView = document.getElementById("login-view");
 const status = document.getElementById("setup-status");
-const signInActions = document.getElementById("sign-in-actions");
-const loginButton = document.getElementById("login-button");
 const loginEmailForm = document.getElementById("login-email-form");
 const loginEmail = document.getElementById("login-email");
-const loginConnectStep = document.getElementById("login-connect-step");
-const loginBackButton = document.getElementById("login-back-button");
 const loginTransition = document.getElementById("login-transition");
 let transitionTimer = null;
+let loginRequestPending = false;
 function resetFrontDoor() {
+  loginRequestPending = false;
   loginEmailForm.hidden = false;
-  loginConnectStep.hidden = true;
+  loginEmail.readOnly = false;
+  loginEmail.value = "";
+  loginEmail.placeholder = "Type your email to login";
+  loginEmailForm.classList.remove("login-denied", "login-approved");
   loginTransition.hidden = true;
   loginTransition.classList.remove("is-visible", "is-complete");
+  loginEmailNext.disabled = !signInReady;
+  loginEmailNext.querySelector("span").textContent = "➜";
 }
-function showConnectStep() {
-  loginEmailForm.hidden = true;
-  loginConnectStep.hidden = false;
-  status.textContent = "Continue with Google to verify your account.";
-  refreshLoginButton();
-}
+const loginEmailNext = document.getElementById("login-email-next");
+loginEmail.addEventListener("input", () => {
+  loginEmailForm.classList.remove("login-denied");
+  loginEmailNext.querySelector("span").textContent = "➜";
+});
 loginEmailForm.addEventListener("submit", event => {
   event.preventDefault();
-  if (!loginEmail.reportValidity()) return;
-  showConnectStep();
+  if (loginRequestPending || !signInReady || !loginEmail.reportValidity()) return;
+  const email = loginEmail.value.trim().toLowerCase();
+  if (!email) return;
+  loginRequestPending = true;
+  loginEmailNext.disabled = true;
+  status.textContent = "Checking Google account...";
+  try {
+    // The popup must be requested directly from the Enter user gesture.
+    // The email hint selects the intended account; Google still verifies identity.
+    signIn({ email, fast: false });
+  } catch (error) {
+    loginRequestPending = false;
+    loginEmailNext.disabled = false;
+    loginEmail.placeholder = "Try again";
+    status.textContent = error.message || "Try again";
+  }
 });
-loginBackButton.addEventListener("click", () => {
-  resetFrontDoor();
-  loginEmail.focus();
-});
-
-const rememberBrowser = document.getElementById("remember-browser");
-const unauthorizedView = document.getElementById("unauthorized-view");
-const unauthorizedAccount = document.getElementById("unauthorized-account");
-const unauthorizedLogoutButton = document.getElementById("unauthorized-logout-button");
-const logoutButton = document.getElementById("logout-button");
 
 const walletView = document.getElementById("wallet-view");
 const walletState = document.getElementById("wallet-state");
@@ -178,30 +182,6 @@ hoverTooltip.className = "hover-tooltip";
 hoverTooltip.hidden = true;
 hoverTooltip.setAttribute("role", "tooltip");
 document.body.append(hoverTooltip);
-
-function readRememberedBrowser() {
-  try { return localStorage.getItem(TRUST_KEY) === "yes"; }
-  catch { return false; }
-}
-
-function setRememberedBrowser(remember) {
-  // Convenience preference only, never passwords, access tokens or wallet records.
-  try {
-    if (remember) localStorage.setItem(TRUST_KEY, "yes");
-    else localStorage.removeItem(TRUST_KEY);
-  } catch { /* Browser storage may be disabled. */ }
-}
-
-let hasRememberPreference = false;
-try { hasRememberPreference = localStorage.getItem(TRUST_KEY) !== null; }
-catch { /* Storage may be unavailable. */ }
-rememberBrowser.checked = hasRememberPreference ? readRememberedBrowser() : true;
-
-function refreshLoginButton() {
-  const fast = rememberBrowser.checked && !selectingAccountRequired;
-  loginButton.innerHTML = fast ? 'Continue with Google <span aria-hidden="true">➜</span>' : 'Connect Google Drive <span aria-hidden="true">➜</span>';
-  loginButton.disabled = !signInReady;
-}
 
 // Ordinary loading messages are read to assistive technologies, not shown as logs.
 // Only errors and data warnings become visible in the wallet.
@@ -372,41 +352,35 @@ function showSignedOut(message = "Enter your email to continue.") {
   resetWallet();
   resetFrontDoor();
   loginView.hidden = false;
-  signInActions.hidden = false;
-  unauthorizedView.hidden = true;
-  unauthorizedAccount.textContent = "";
   status.textContent = message;
-  refreshLoginButton();
 }
 
 function showSignedIn() {
   resetWallet();
   loginTransition.hidden = false;
   loginTransition.classList.add("is-visible");
-  setRememberedBrowser(rememberBrowser.checked);
-  attemptedFastLogin = false;
-  selectingAccountRequired = false;
-  loginView.hidden = true;
+  loginEmailForm.classList.add("login-approved");
+      loginView.hidden = true;
   walletView.hidden = false;
   setWalletMessage("Opening wallet...");
   beginWalletProgress("Getting your wallet ready...");
   monthLabel.textContent = formatMonth(currentMonth);
 }
 
-function showUnauthorized(email) {
+function showUnauthorized() {
   signOut();
   resetWallet();
-  attemptedFastLogin = false;
-  selectingAccountRequired = true;
-  rememberBrowser.checked = false;
-  setRememberedBrowser(false);
+  loginRequestPending = false;
   loginView.hidden = false;
-  signInActions.hidden = true;
-  unauthorizedView.hidden = false;
-  unauthorizedAccount.textContent = "Signed in as " + email;
-  status.textContent = "";
+  loginEmailForm.hidden = false;
+  loginEmail.value = "";
+  loginEmail.placeholder = "You have no access";
+  loginEmailForm.classList.add("login-denied");
+  loginEmailNext.disabled = false;
+  loginEmailNext.querySelector("span").textContent = "×";
   loginTransition.hidden = true;
   loginTransition.classList.remove("is-visible", "is-complete");
+  status.textContent = "";
 }
 
 function addTextCell(row, text, className) {
@@ -1366,23 +1340,6 @@ addForm.addEventListener("submit", async event => {
   }
 });
 
-rememberBrowser.addEventListener("change", () => {
-  selectingAccountRequired = false;
-  refreshLoginButton();
-});
-
-loginButton.addEventListener("click", () => {
-  try {
-    const fast = rememberBrowser.checked && !selectingAccountRequired;
-    attemptedFastLogin = fast;
-    status.textContent = fast ? "Trying faster Google sign-in..." : "Opening Google sign-in...";
-    signIn({ fast }); // Must run from a direct user click.
-  } catch (error) {
-    selectingAccountRequired = true;
-    showSignedOut(error.message);
-  }
-});
-
 otherMonthsButton.addEventListener("click", openOtherMonths);
 otherMonthsClose.addEventListener("click", () => closeOtherMonths());
 otherMonthsPrev.addEventListener("click", () => {
@@ -1525,29 +1482,23 @@ refreshButton.addEventListener("click", () => {
 function logout() {
   clearTimeout(transitionTimer);
   signOut();
-  setRememberedBrowser(false);
-  rememberBrowser.checked = false;
-  selectingAccountRequired = false;
-  attemptedFastLogin = false;
-  showSignedOut();
+      showSignedOut();
 }
 
 logoutButton.addEventListener("click", logout);
-unauthorizedLogoutButton.addEventListener("click", logout);
 
 try {
   await initialiseGoogleLogin({
-    shouldRememberSession: () => rememberBrowser.checked,
+    shouldRememberSession: () => false,
     onSignedIn: showSignedIn,
     onUnauthorized: showUnauthorized,
-    onError: message => {
-      if (attemptedFastLogin) {
-        selectingAccountRequired = true;
-        attemptedFastLogin = false;
-        showSignedOut("Fast login unavailable. Click Sign in with Google to choose your account.");
-      } else {
-        showSignedOut(message);
-      }
+    onError: () => {
+      loginRequestPending = false;
+      loginEmailNext.disabled = false;
+      loginEmailForm.classList.remove("login-denied");
+      loginEmail.value = "";
+      loginEmail.placeholder = "Try again";
+      status.textContent = "";
     },
     onDriveReady,
     onDriveError: message => {
@@ -1556,14 +1507,7 @@ try {
     }
   });
   signInReady = true;
-  const restored = await restoreLoginSession();
-  if (!restored) {
-    showSignedOut(
-      rememberBrowser.checked
-        ? "Welcome back. Continue with Google."
-        : "Sign in with your Google account."
-    );
-  }
+  showSignedOut("");
 } catch (error) {
   signInReady = false;
   showSignedOut(error.message);
