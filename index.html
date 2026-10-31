@@ -8,8 +8,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
   <link rel="icon" type="image/svg+xml" href="assets/favicon.svg?v=green-dollar-1">
-  <link rel="stylesheet" href="src/styles.css?v=20261031-loginlayout2">
-  <script src="src/app.js?v=20261031-frontdoor1" type="module"></script>
+  <link rel="stylesheet" href="src/styles.css?v=20261031-emailgate1">
+  <script src="src/app.js?v=20261031-emailgate1" type="module"></script>
 </head>
 <body>
   <main id="app">
@@ -23,26 +23,11 @@
             <label for="login-email">Your email</label>
             <div class="front-door-input-wrap">
               <input id="login-email" type="email" autocomplete="email" placeholder="Type your email to login" required maxlength="254">
-              <button type="submit" id="login-email-next" aria-label="Continue to Google connection">
+              <button type="submit" id="login-email-next" aria-label="Enter">
                 <span aria-hidden="true">➜</span>
               </button>
             </div>
           </form>
-          <div id="login-connect-step" class="front-door-connect" hidden>
-            <p class="front-door-step-label">Connect your account</p>
-            <button type="button" id="login-button" disabled>Connect Google Drive <span aria-hidden="true">➜</span></button>
-            <button type="button" id="login-back-button" class="front-door-back">Back</button>
-          </div>
-          <label class="remember-label visually-hidden" for="remember-browser">
-            <input type="checkbox" id="remember-browser" checked>
-            Remember this browser for faster sign-in
-          </label>
-        </div>
-        <div id="unauthorized-view" class="front-door-denied" hidden>
-          <div class="front-door-denied-icon" aria-hidden="true">×</div>
-          <p class="front-door-denied-title">Access not allowed</p>
-          <p id="unauthorized-account"></p>
-          <button type="button" id="unauthorized-logout-button">Cancel</button>
         </div>
         <p id="setup-status" class="front-door-status" role="status" aria-live="polite">Preparing Google sign-in...</p>
       </div>
