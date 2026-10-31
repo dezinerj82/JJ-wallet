@@ -1559,21 +1559,22 @@ refreshButton.addEventListener("click", () => {
 function logout(event) {
   event?.preventDefault();
   clearTimeout(transitionTimer);
-  // Terminate local credentials before touching any view state.
-  signOut();
-  // Always leave the authenticated view, even if a UI reset fails.
+  // Sign out closes the wallet view only; the still-valid Google token
+  // remains available for a subsequent explicit login.
+  loginTransition.hidden = true;
+  loginTransition.classList.remove("is-visible", "is-complete");
+  walletView.hidden = true;
+  loginView.hidden = false;
+  loginRequestPending = false;
+  resetFrontDoor();
+  status.textContent = "";
   try {
-    showSignedOut("");
+    resetWallet();
   } catch (error) {
-    console.error("Wallet sign-out cleanup failed:", error);
+    console.error("Wallet view cleanup failed:", error);
   } finally {
-    loginRequestPending = false;
-    loginTransition.hidden = true;
-    loginTransition.classList.remove("is-visible", "is-complete");
     walletView.hidden = true;
     loginView.hidden = false;
-    resetFrontDoor();
-    status.textContent = "";
   }
 }
 
