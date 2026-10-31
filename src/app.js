@@ -46,10 +46,48 @@ const loginEmailForm = document.getElementById("login-email-form");
 const loginEmail = document.getElementById("login-email");
 const loginStartButton = document.getElementById("login-start-button");
 const loginTransition = document.getElementById("login-transition");
+const loginProgressTrack = document.getElementById("login-progress-track");
+const loginProgressFill = document.getElementById("login-progress-fill");
 let transitionTimer = null;
 let loginRequestPending = false;
 let loginOpenAnimation = null;
 let loginViewTimer = null;
+let loginLoadingCompleted = false;
+let loginLoadingEntered = false;
+function setLoginProgress(value) {
+  const percentage = Math.max(0, Math.min(100, value));
+  loginProgressFill.style.width = percentage + "%";
+  loginProgressTrack.setAttribute("aria-valuenow", String(percentage));
+}
+function enterLoginLoading() {
+  loginLoadingEntered = true;
+  loginView.hidden = true;
+  walletView.hidden = false;
+  loginTransition.hidden = false;
+  loginTransition.classList.add("is-visible");
+  if (loginLoadingCompleted) finishLoginLoading();
+}
+function finishLoginLoading() {
+  loginLoadingCompleted = true;
+  setLoginProgress(100);
+  if (!loginLoadingEntered) return;
+  loginTransition.classList.add("is-complete");
+  clearTimeout(transitionTimer);
+  transitionTimer = setTimeout(() => {
+    loginTransition.classList.remove("is-visible");
+    loginTransition.hidden = true;
+    loginTransition.classList.remove("is-complete");
+  }, 950);
+}
+function cancelLoginLoading() {
+  clearTimeout(loginViewTimer);
+  clearTimeout(transitionTimer);
+  loginLoadingEntered = false;
+  loginLoadingCompleted = false;
+  loginTransition.hidden = true;
+  loginTransition.classList.remove("is-visible", "is-complete");
+  setLoginProgress(0);
+}
 function openLoginForm() {
   if (!loginEmailForm.classList.contains("login-form-closed")) return;
   const startRect = loginStartButton.getBoundingClientRect();
@@ -74,7 +112,7 @@ function openLoginForm() {
 }
 loginStartButton.addEventListener("click", openLoginForm);
 function resetFrontDoor() {
-  clearTimeout(loginViewTimer);
+  cancelLoginLoading();
   loginRequestPending = false;
   loginOpenAnimation?.cancel();
   loginOpenAnimation = null;
@@ -470,18 +508,16 @@ function showSignedOut(message = "") {
 function showSignedIn() {
   resetWallet();
   clearTimeout(loginViewTimer);
+  loginLoadingCompleted = false;
+  loginLoadingEntered = false;
+  setLoginProgress(12);
   loginEmailForm.classList.add("login-approved", "login-confetti-play");
   loginEmailNext.querySelector("span").textContent = "✓";
   loginEmail.readOnly = true;
   loginEmailNext.disabled = true;
   // Let the successful green-button state and confetti play before
   // smoothly revealing the existing wallet-loading transition.
-  loginViewTimer = setTimeout(() => {
-    loginView.hidden = true;
-    walletView.hidden = false;
-    loginTransition.hidden = false;
-    loginTransition.classList.add("is-visible");
-  }, 660);
+  loginViewTimer = setTimeout(enterLoginLoading, 660);
   setWalletMessage("Opening wallet...");
   beginWalletProgress("Getting your wallet ready...");
   monthLabel.textContent = formatMonth(currentMonth);
@@ -499,8 +535,7 @@ function showUnauthorized() {
   loginEmailForm.classList.remove("login-confetti-play");
   loginEmailNext.disabled = false;
   loginEmailNext.querySelector("span").textContent = "×";
-  loginTransition.hidden = true;
-  loginTransition.classList.remove("is-visible", "is-complete");
+  cancelLoginLoading();
   status.textContent = "";
 }
 
@@ -899,10 +934,14 @@ async function onDriveReady() {
 
     const folder = await findBillsFolder(token);
     if (version !== connectionVersion || !getDriveToken()) return;
+    setLoginProgress(55);
     if (!folder) {
       setWalletMessage(
         "Wallet bills folder not found. Check its Drive access. No folder was created.", true
       );
+      cancelLoginLoading();
+      loginView.hidden = true;
+      walletView.hidden = false;
       return;
     }
     activeFolderId = folder.id;
@@ -912,22 +951,23 @@ async function onDriveReady() {
     if (folder.name !== "Wallet bills") {
       setWalletMessage("Rename the connected Drive folder to Wallet bills.", true);
     }
+    setLoginProgress(75);
     await loadWalletRecords("Loading your items...");
     if (version === connectionVersion && activeFolderId) {
-      loginTransition.classList.add("is-complete");
-      clearTimeout(transitionTimer);
-      transitionTimer = setTimeout(() => {
-        loginTransition.classList.remove("is-visible");
-        setTimeout(() => { loginTransition.hidden = true; loginTransition.classList.remove("is-complete"); }, 420);
-      }, 650);
+      if (walletBalanceReady) finishLoginLoading();
+      else {
+        cancelLoginLoading();
+        loginView.hidden = true;
+        walletView.hidden = false;
+      }
     }
   } catch (error) {
     if (version !== connectionVersion) return;
-    loginTransition.hidden = true;
-    loginTransition.classList.remove("is-visible", "is-complete");
+    cancelLoginLoading();
+    loginView.hidden = true;
+    walletView.hidden = false;
     setWalletMessage(error.message || "Couldn't open your wallet. Please try again.", true);
   } finally {
-    if (!activeFolderId) { loginTransition.hidden = true; loginTransition.classList.remove("is-visible", "is-complete"); }
     finishWalletProgress(ticket);
   }
 }
@@ -1602,7 +1642,7 @@ refreshButton.addEventListener("click", () => {
 
 function logout(event) {
   event?.preventDefault();
-  clearTimeout(transitionTimer);
+  cancelLoginLoading();
   // Sign out closes the wallet view only; the still-valid Google token
   // remains available for a subsequent explicit login.
   loginTransition.hidden = true;
