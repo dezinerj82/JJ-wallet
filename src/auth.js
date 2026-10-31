@@ -77,7 +77,7 @@ async function receiveLoginToken(response) {
   }
   try {
     const account = await getVerifiedAccount(response.access_token);
-    if (account.email.trim().toLowerCase() !== requestedEmail ||
+    if ((requestedEmail && account.email.trim().toLowerCase() !== requestedEmail) ||
         !(await isAuthorisedEmail(account.email))) {
       clearTokens();
       clearStoredSession();
@@ -126,15 +126,15 @@ function loadGoogleLibrary() {
 
 // Restore only a currently valid SAME-TAB token. Verify the actual Google account
 // and Drive permission again; a local "remember me" flag never grants access.
-export function canRestoreLoginSession(email) {
+export function canRestoreLoginSession(email, username = false) {
   try {
     const saved = JSON.parse(sessionStorage.getItem(SESSION_KEY) || "null");
-    return Boolean(saved && saved.email === String(email || "").trim().toLowerCase() &&
+    return Boolean(saved && (username || saved.email === String(email || "").trim().toLowerCase()) &&
       typeof saved.token === "string" && Number.isFinite(saved.expiresAt) &&
       saved.expiresAt > Date.now() && saved.expiresAt <= Date.now() + 2 * 60 * 60 * 1000);
   } catch { return false; }
 }
-export async function restoreLoginSession(expectedEmail) {
+export async function restoreLoginSession(expectedEmail, username = false) {
   clearTokens();
   if (!handlers?.shouldRememberSession?.()) {
     clearStoredSession();
@@ -148,7 +148,7 @@ export async function restoreLoginSession(expectedEmail) {
       !Number.isFinite(saved.expiresAt) || saved.expiresAt <= Date.now() ||
       saved.expiresAt > Date.now() + 2 * 60 * 60 * 1000 ||
       !saved.subject || typeof saved.subject !== "string" ||
-      saved.email !== String(expectedEmail || "").trim().toLowerCase() ||
+      (!username && saved.email !== String(expectedEmail || "").trim().toLowerCase()) ||
       !String(saved.scope).split(/\s+/).includes(DRIVE_SCOPE)) {
     clearStoredSession();
     return false;
@@ -157,7 +157,7 @@ export async function restoreLoginSession(expectedEmail) {
   try {
     const account = await getVerifiedAccount(saved.token);
     if (account.sub !== saved.subject ||
-        account.email.trim().toLowerCase() !== String(expectedEmail || "").trim().toLowerCase() ||
+        (!username && account.email.trim().toLowerCase() !== String(expectedEmail || "").trim().toLowerCase()) ||
         !(await isAuthorisedEmail(account.email))) {
       clearStoredSession();
       handlers.onUnauthorized(account.email);
@@ -188,14 +188,15 @@ export async function initialiseGoogleLogin(callbacks) {
   });
 }
 
-export function signIn({ email, fast = false } = {}) {
+export function signIn({ email, username = false, fast = false } = {}) {
   if (!tokenClient) throw new Error("Google sign-in is not ready.");
-  requestedEmail = String(email || "").trim().toLowerCase();
-  if (!requestedEmail) throw new Error("Enter your email.");
-  tokenClient.requestAccessToken({
-    prompt: fast ? "" : "select_account",
-    login_hint: requestedEmail
-  });
+  requestedEmail = username ? "" : String(email || "").trim().toLowerCase();
+  if (!requestedEmail && !username) throw new Error("Enter your email or username.");
+  const request = { prompt: fast ? "" : "select_account" };
+  // Username mode uses Google's account selection; the existing verified
+  // email allowlist is still checked before opening any wallet data.
+  if (requestedEmail) request.login_hint = requestedEmail;
+  tokenClient.requestAccessToken(request);
 }
 
 export function getDriveToken() {
