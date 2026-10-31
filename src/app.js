@@ -8,8 +8,9 @@ import { csvTemplate, parseWalletCsv } from "./csv.js";
 import {
   WALLET_GROUPS, parseWalletFiles, entriesForMonth, calculateMonthlyPlan,
   calculatePastUnpaid, suggestedHolds,
-  monthKey, shiftedMonthKey, formatMonth, formatAmount, effectiveUnpaid
+  monthKey, shiftedMonthKey, formatMonth, formatAmount
 } from "./records.js";
+import { effectiveUnpaid } from "./settlement.js";
 
 const TRUST_KEY = "home-wallet-remember-browser-v1";
 let currentMonth = monthKey(new Date());
@@ -697,7 +698,19 @@ function renderTable(month, target, groupStates, fromComparison = false) {
   const rows = document.createDocumentFragment();
 
   for (const group of availableGroups(walletEntries)) {
-    const entries = mergeCarriedRows(groups[group]);
+    const calendarMonth = monthKey(new Date());
+    const entries = mergeCarriedRows(
+      month === selectedMonth && !fromComparison && month < calendarMonth
+        ? groups[group].map(part => {
+            if (part.group === "IN" || part.group === "Saving") return part;
+            const source = walletEntries.find(entry =>
+              entry.group === part.group && entry.item === part.item &&
+              entry.month === (part.carryOver ? part.carryFrom : part.month));
+            const unpaid = source ? effectiveUnpaid(source, calendarMonth) : 0;
+            return { ...part, unpaid, carryOver: true,
+              carryFrom: part.carryOver ? part.carryFrom : part.month };
+          }) : groups[group]
+    );
     const expanded = groupStates.get(group) !== false;
     const headingRow = document.createElement("tr");
     headingRow.className = "group-heading";
@@ -763,7 +776,7 @@ function renderTable(month, target, groupStates, fromComparison = false) {
       editButton.className = "update-item-button";
       editButton.setAttribute("aria-label", "Update " + entry.item);
       const editable = entry.group === "Saving" ||
-        (!entry.carryOver && entry.month >= currentMonth);
+        (!fromComparison && !entry.carryOver && entry.month >= currentMonth);
       editButton.disabled = !editable;
       editButton.title = editable
         ? entry.group === "Saving" ? "Savings settings" : "Update " + entry.item
