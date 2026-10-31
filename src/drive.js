@@ -1327,3 +1327,52 @@ export async function recordBillPayment(token, folderId, previous, rawAmount) {
   }
   return { group,item,month:current };
 }
+
+const MONTH_CLOSE_FILE = "wallet-month-close.txt";
+const MONTH_CLOSE_MARKER = "home-wallet-month-close";
+
+// A separate, append-only receipt prevents outstanding balances from
+// implicitly closing a month. The receipt is written only after payments.
+export async function closeWalletMonth(token, folderId, month) {
+  if (!token || !folderId || !/^(?:19|20|21)\d{2}(?:0[1-9]|1[0-2])$/.test(month)) {
+    throw new Error("Invalid month closure.");
+  }
+  const files = await listWalletFileMetadata(token, folderId);
+  const matches = files.filter(file => file.name === MONTH_CLOSE_FILE);
+  if (matches.length > 1) throw new Error("Multiple month closure files found. Review Google Drive.");
+  const line = "@CLOSE\t" + month + "\n";
+  if (matches.length) {
+    const file = matches[0];
+    if (file.appProperties?.purpose !== MONTH_CLOSE_MARKER) {
+      throw new Error("Month closure file is not app-owned.");
+    }
+    const old = await getFileText(token, file.id);
+    if (old.split("\n").includes(line.trim())) return { month, alreadyClosed: true };
+    if (new Blob([old, line]).size > WRITE_LIMIT) throw new Error("Month history is full.");
+    const expected = old + (old && !old.endsWith("\n") ? "\n" : "") + line;
+    await replaceWalletText(token, file.id, expected);
+    if (await getFileText(token, file.id) !== expected)
+      throw new Error("Month closure could not be verified. Refresh before retrying.");
+  } else {
+    const boundary = "wallet-close-" + crypto.randomUUID().replace(/-/g, "");
+    const metadata = { name: MONTH_CLOSE_FILE, mimeType: "text/plain",
+      parents: [folderId], appProperties: { purpose: MONTH_CLOSE_MARKER } };
+    const payload = new Blob([
+      "--" + boundary + "\r\n", "Content-Type: application/json; charset=UTF-8\r\n\r\n",
+      JSON.stringify(metadata), "\r\n--" + boundary + "\r\n",
+      "Content-Type: text/plain; charset=UTF-8\r\n\r\n",
+      line, "\r\n--" + boundary + "--\r\n"
+    ], { type: "multipart/related; boundary=" + boundary });
+    const response = await fetch(
+      "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,parents,appProperties",
+      { method: "POST", headers: { Authorization: "Bearer " + token }, body: payload });
+    if (!response.ok) throw new Error("Couldn't save the month closure.");
+    const created = await response.json();
+    if (!created.id || created.name !== MONTH_CLOSE_FILE ||
+        created.appProperties?.purpose !== MONTH_CLOSE_MARKER ||
+        !created.parents?.includes(folderId) ||
+        await getFileText(token, created.id) !== line)
+      throw new Error("Month closure wasn't verified. Refresh before retrying.");
+  }
+  return { month };
+}
