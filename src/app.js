@@ -80,6 +80,7 @@ function finishLoginLoading() {
     loginTransition.classList.remove("is-visible");
     loginTransition.hidden = true;
     loginTransition.classList.remove("is-complete");
+    showMonthLockAlertIfNeeded();
   }, 950);
 }
 function cancelLoginLoading() {
@@ -870,6 +871,15 @@ function earliestUnpaidMonth(calendarMonth) {
   ).map(entry => entry.month);
   return outstanding.length ? outstanding.sort()[0] : null;
 }
+function showMonthLockAlertIfNeeded() {
+  if (!walletBalanceReady || !walletView || walletView.hidden ||
+      !loginTransition.hidden || monthLockAlert.open) return;
+  const locked = earliestUnpaidMonth(monthKey(new Date()));
+  if (locked && monthLockNoticeShown !== locked) {
+    monthLockNoticeShown = locked;
+    monthLockAlert.showModal();
+  }
+}
 function renderMonth() {
   const calendarMonth = monthKey(new Date());
   const locked = earliestUnpaidMonth(calendarMonth);
@@ -882,11 +892,8 @@ function renderMonth() {
   monthLabel.textContent = formatMonth(selectedMonth);
   renderTable(selectedMonth, walletTableBody, expandedGroups);
   renderBalance();
-  if (locked && walletBalanceReady && monthLockNoticeShown !== locked) {
-    monthLockNoticeShown = locked;
-    if (!monthLockAlert.open) monthLockAlert.showModal();
-  }
   if (!locked && monthLockAlert.open) monthLockAlert.close();
+  showMonthLockAlertIfNeeded();
 }
 
 function renderComparisonMonth() {
@@ -1777,6 +1784,18 @@ window.addEventListener("resize", () => {
   const rect = otherMonthsWindow.getBoundingClientRect();
   resizeOtherMonthsTo(rect.width, rect.height);
 });
+
+function refreshWalletOnMonthChange() {
+  if (activeFolderId && walletBalanceReady &&
+      monthKey(new Date()) !== currentMonth && getDriveToken()) {
+    void loadWalletRecords("Refreshing for the new month...");
+  }
+}
+window.addEventListener("focus", refreshWalletOnMonthChange);
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) refreshWalletOnMonthChange();
+});
+setInterval(refreshWalletOnMonthChange, 60000);
 
 refreshButton.addEventListener("click", () => {
   if (activeFolderId) {
