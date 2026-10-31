@@ -1424,6 +1424,11 @@ function openClearBillPanel() {
   closePayPanel();
   closeSavingSettings();
   closeClearBillPanel();
+  for (const title of ["Pay item", "Payment (RM)"]) {
+    const heading = document.createElement("strong");
+    heading.textContent = title;
+    clearBillRows.append(heading);
+  }
   clearBillParts = clearBillEntries(month);
   for (const entry of clearBillParts) {
     const label = document.createElement("label");
