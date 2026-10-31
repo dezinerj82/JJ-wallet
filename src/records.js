@@ -342,13 +342,21 @@ export function calculateMonthlyBalance(allEntries, month, asOf = new Date()) {
   return calculateMonthlyPlan(allEntries, month, asOf).balance;
 }
 
-// Outstanding obligations originating before the displayed month.
-// Current-month charges are excluded, and settled overdue payments are deducted.
+// Read-only preview: outstanding past-month obligations, plus only the
+// explicitly recorded opening Unpaid amount of current-month Others items.
+// New payments clear an entered opening debt before the regular bill portion.
+// Never change the underlying amounts, settlements, or carry-forward logic.
 export function calculatePastUnpaid(allEntries, month) {
   let cents = 0;
   for (const entry of allEntries) {
-    if (!isExpenseGroup(entry.group) || entry.month >= month) continue;
-    cents += Math.round(effectiveUnpaid(entry, month) * 100);
+    if (!isExpenseGroup(entry.group) || entry.month > month) continue;
+    if (entry.month < month) {
+      cents += Math.round(effectiveUnpaid(entry, month) * 100);
+    } else if (entry.group === "Others" && entry.openingUnpaid > 0) {
+      const openingCents = Math.round(entry.openingUnpaid * 100);
+      const paidCents = Math.round(entry.paid * 100);
+      cents += Math.max(0, openingCents - paidCents);
+    }
     if (!Number.isSafeInteger(cents)) throw new Error("Past unpaid total is too large.");
   }
   return cents / 100;
