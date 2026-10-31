@@ -89,7 +89,8 @@ loginEmailForm.addEventListener("submit", event => {
     return;
   }
   loginRequestPending = true;
-  loginEmailNext.disabled = true;
+  // Keep Enter usable if a browser suppresses the Google popup without a callback.
+  loginEmailNext.disabled = false;
   status.textContent = "Checking Google account...";
   try {
     if (canRestoreLoginSession(email)) {
