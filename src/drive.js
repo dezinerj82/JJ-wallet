@@ -251,6 +251,16 @@ function validateEntry(entry) {
   if (!Number.isSafeInteger(Math.round(amount * 100))) {
     throw new Error("The entered amount is too large.");
   }
+  const rawOpeningUnpaid = String(entry?.openingUnpaid ?? "0").trim();
+  if (group === "Others" &&
+      !/^(?:0|[1-9]\\d{0,11})(?:\\.\\d{1,2})?$/.test(rawOpeningUnpaid)) {
+    throw new Error("Enter a valid unpaid balance.");
+  }
+  const openingUnpaid = group === "Others" ? Number(rawOpeningUnpaid) : 0;
+  const totalCents = Math.round(amount * 100) + Math.round(openingUnpaid * 100);
+  if (!Number.isSafeInteger(totalCents)) {
+    throw new Error("The total amount is too large.");
+  }
 
   const optional = {};
   for (const field of ["retail", "url", "remark"]) {
@@ -270,10 +280,12 @@ function validateEntry(entry) {
     }
   }
 
-  const fields = [group, item, month, amount.toFixed(2)];
-  if (group !== "IN") fields.push("0.00", amount.toFixed(2));
+  const totalAmount = group === "Others" ? totalCents / 100 : amount;
+  const fields = [group, item, month, totalAmount.toFixed(2)];
+  if (group !== "IN") fields.push("0.00", totalAmount.toFixed(2));
   if (group === "Others") {
     fields.push(optional.retail, optional.url, optional.remark);
+    if (openingUnpaid > 0) fields.push(openingUnpaid.toFixed(2));
   } else if (optional.remark) {
     // Keep legacy 4-field IN and 6-field Bills entries unchanged when no
     // remark was supplied; append optional remarks only when actually present.
@@ -502,7 +514,8 @@ function matchesDisplayedSnapshot(fields, previous) {
   if (previous.group === "Others") {
     return (fields[6] || "") === (previous.retail || "") &&
       (fields[7] || "") === (previous.url || "") &&
-      (fields[8] || "") === (previous.remark || "");
+      (fields[8] || "") === (previous.remark || "") &&
+      Number(fields[9] || 0) === (previous.openingUnpaid || 0);
   }
   // Verify the last saved remark too, so stale changes cannot silently win.
   const remarkIndex = previous.group === "IN" ? 4 : 6;
