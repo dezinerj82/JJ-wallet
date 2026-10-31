@@ -45,6 +45,34 @@ const loginView = document.getElementById("login-view");
 const status = document.getElementById("setup-status");
 const signInActions = document.getElementById("sign-in-actions");
 const loginButton = document.getElementById("login-button");
+const loginEmailForm = document.getElementById("login-email-form");
+const loginEmail = document.getElementById("login-email");
+const loginConnectStep = document.getElementById("login-connect-step");
+const loginBackButton = document.getElementById("login-back-button");
+const loginTransition = document.getElementById("login-transition");
+let transitionTimer = null;
+function resetFrontDoor() {
+  loginEmailForm.hidden = false;
+  loginConnectStep.hidden = true;
+  loginTransition.hidden = true;
+  loginTransition.classList.remove("is-visible", "is-complete");
+}
+function showConnectStep() {
+  loginEmailForm.hidden = true;
+  loginConnectStep.hidden = false;
+  status.textContent = "Continue with Google to verify your account.";
+  refreshLoginButton();
+}
+loginEmailForm.addEventListener("submit", event => {
+  event.preventDefault();
+  if (!loginEmail.reportValidity()) return;
+  showConnectStep();
+});
+loginBackButton.addEventListener("click", () => {
+  resetFrontDoor();
+  loginEmail.focus();
+});
+
 const rememberBrowser = document.getElementById("remember-browser");
 const unauthorizedView = document.getElementById("unauthorized-view");
 const unauthorizedAccount = document.getElementById("unauthorized-account");
@@ -164,11 +192,11 @@ function setRememberedBrowser(remember) {
   } catch { /* Browser storage may be disabled. */ }
 }
 
-rememberBrowser.checked = readRememberedBrowser();
+rememberBrowser.checked = readRememberedBrowser() || localStorage.getItem(TRUST_KEY) === null;
 
 function refreshLoginButton() {
   const fast = rememberBrowser.checked && !selectingAccountRequired;
-  loginButton.textContent = fast ? "Continue with Google" : "Sign in with Google";
+  loginButton.innerHTML = fast ? 'Continue with Google <span aria-hidden="true">➜</span>' : 'Connect Google Drive <span aria-hidden="true">➜</span>';
   loginButton.disabled = !signInReady;
 }
 
@@ -337,8 +365,9 @@ function resetWallet() {
   selectedMonth = currentMonth;
 }
 
-function showSignedOut(message = "Sign in with your Google account.") {
+function showSignedOut(message = "Enter your email to continue.") {
   resetWallet();
+  resetFrontDoor();
   loginView.hidden = false;
   signInActions.hidden = false;
   unauthorizedView.hidden = true;
@@ -349,6 +378,8 @@ function showSignedOut(message = "Sign in with your Google account.") {
 
 function showSignedIn() {
   resetWallet();
+  loginTransition.hidden = false;
+  loginTransition.classList.add("is-visible");
   setRememberedBrowser(rememberBrowser.checked);
   attemptedFastLogin = false;
   selectingAccountRequired = false;
@@ -370,7 +401,9 @@ function showUnauthorized(email) {
   signInActions.hidden = true;
   unauthorizedView.hidden = false;
   unauthorizedAccount.textContent = "Signed in as " + email;
-  status.textContent = "Google identity confirmed.";
+  status.textContent = "";
+  loginTransition.hidden = true;
+  loginTransition.classList.remove("is-visible", "is-complete");
 }
 
 function addTextCell(row, text, className) {
@@ -782,10 +815,19 @@ async function onDriveReady() {
       setWalletMessage("Rename the connected Drive folder to Wallet bills.", true);
     }
     await loadWalletRecords("Loading your items...");
+    if (version === connectionVersion && activeFolderId) {
+      loginTransition.classList.add("is-complete");
+      clearTimeout(transitionTimer);
+      transitionTimer = setTimeout(() => {
+        loginTransition.classList.remove("is-visible");
+        setTimeout(() => { loginTransition.hidden = true; loginTransition.classList.remove("is-complete"); }, 420);
+      }, 650);
+    }
   } catch (error) {
     if (version !== connectionVersion) return;
     setWalletMessage(error.message || "Couldn't open your wallet. Please try again.", true);
   } finally {
+    if (!activeFolderId) { loginTransition.hidden = true; loginTransition.classList.remove("is-visible", "is-complete"); }
     finishWalletProgress(ticket);
   }
 }
@@ -1476,6 +1518,7 @@ refreshButton.addEventListener("click", () => {
 });
 
 function logout() {
+  clearTimeout(transitionTimer);
   signOut();
   setRememberedBrowser(false);
   rememberBrowser.checked = false;
