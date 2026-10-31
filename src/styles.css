@@ -1054,3 +1054,29 @@ select:focus-visible {
   .wallet-balance-pill { font-size: 1rem; }
   .hold-badge { padding: .13rem .4rem; margin-right: .25rem; }
 }
+
+/* Consistent medium-tone controls, distinct from large pills and table controls. */
+.wallet-actions button,
+.wallet-import-actions button {
+  --btn-bg: #a8b1df;
+  --btn-hover: #929dd2;
+  --btn-text: #253068;
+  font-size: .9rem;
+  min-height: 2.35rem;
+  padding: .53rem 1.05rem;
+}
+#refresh-wallet-button,
+#add-item-button,
+#logout-button,
+#wallet-download-template,
+#wallet-setup-button {
+  --btn-bg: #a8b1df;
+  --btn-hover: #929dd2;
+  --btn-text: #253068;
+}
+.wallet-import-actions { display: flex; align-items: center; gap: .5rem; margin-right: auto; }
+.wallet-balance-row { flex-wrap: wrap; }
+@media (max-width: 600px) {
+  .wallet-import-actions { gap: .4rem; }
+  .wallet-import-actions button { padding: .55rem .85rem; }
+}
