@@ -1,7 +1,7 @@
 import { initialiseGoogleLogin, canRestoreLoginSession, restoreLoginSession, signIn, signOut, getDriveToken } from "./auth.js";
 import { findBillsFolder, readWalletTextFiles, addWalletItem, addWalletInstallments, updateWalletItem, deleteWalletItem, renewRecurringBills, renewScheduledItems, importWalletSetup, saveSavingSettings, withdrawSavingItem, recordBillPayment } from "./drive.js";
 import { getMyrKrwRate, formatWalletCurrency, rateDateLabel } from "./currency.js";
-import { displayGroup, availableGroups, isCustomGroup, NEW_CATEGORY, NEW_ITEM } from "./groups.js";
+import { displayGroup, availableGroups, isExpenseGroup, isCustomGroup, NEW_CATEGORY, NEW_ITEM } from "./groups.js";
 import { buildMeta, parseAllMetadata, serviceReminders, effectiveServiceMonth, metaKey } from "./private-meta.js";
 import { plannedAlerts, validateSetupPayload } from "./setup.js";
 import { csvTemplate, parseWalletCsv } from "./csv.js";
@@ -844,7 +844,7 @@ function renderBalance() {
     return;
   }
   try {
-    const plan = calculateMonthlyPlan(walletEntries, currentMonth);
+    const plan = calculateMonthlyPlan(walletEntries, selectedMonth);
     walletBalanceOutput.classList.toggle("balance-negative", plan.balance < 0);
     const unpaid = calculatePastUnpaid(walletEntries, currentMonth);
     walletUnpaidOutput.hidden = false;
@@ -864,7 +864,7 @@ function renderBalance() {
 
 function earliestUnpaidMonth(calendarMonth) {
   const outstanding = walletEntries.filter(entry =>
-    entry.group !== "IN" && entry.group !== "Saving" &&
+    isExpenseGroup(entry.group) &&
     !entry.catalogOnly && entry.month >= MIN_LOCK_MONTH &&
     entry.month < calendarMonth &&
     effectiveUnpaid(entry, calendarMonth) > 0
