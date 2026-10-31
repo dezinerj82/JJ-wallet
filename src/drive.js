@@ -1337,6 +1337,10 @@ export async function closeWalletMonth(token, folderId, month) {
   if (!token || !folderId || !/^(?:19|20|21)\d{2}(?:0[1-9]|1[0-2])$/.test(month)) {
     throw new Error("Invalid month closure.");
   }
+  const now = new Date();
+  const todayMonth = String(now.getFullYear()) +
+    String(now.getMonth() + 1).padStart(2, "0");
+  if (month > todayMonth) throw new Error("Future months cannot be cleared yet.");
   const files = await listWalletFileMetadata(token, folderId);
   const matches = files.filter(file => file.name === MONTH_CLOSE_FILE);
   if (matches.length > 1) throw new Error("Multiple month closure files found. Review Google Drive.");
