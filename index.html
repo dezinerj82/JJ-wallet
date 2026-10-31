@@ -9,7 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&amp;family=Google+Sans:wght@400;500;600;700&amp;family=Roboto:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
   <link rel="icon" type="image/svg+xml" href="assets/favicon.svg?v=green-dollar-1">
   <link rel="stylesheet" href="src/styles.css?v=20261031-rowspacing26">
-  <script src="src/app.js?v=20261031-monthlock25" type="module"></script>
+  <script src="src/app.js?v=20261031-unpaidpreview27" type="module"></script>
 </head>
 <body>
   <main id="app">
@@ -215,7 +215,7 @@
           <button type="button" id="wallet-setup-button" disabled>Import</button>
           <input type="file" id="wallet-setup-file" accept=".csv,text/csv,.json,application/json" hidden>
         </div>
-        <output id="wallet-unpaid" class="wallet-balance-pill wallet-unpaid-pill" aria-live="polite" title="Outstanding amounts from earlier months only; excludes this month">
+        <output id="wallet-unpaid" class="wallet-balance-pill wallet-unpaid-pill" aria-live="polite" title="Previous unpaid balances and manually entered Unpaid amounts; excludes normal current-month bills">
           <span>Unpaid :</span>
           <span id="wallet-unpaid-amount">—</span>
         </output>
