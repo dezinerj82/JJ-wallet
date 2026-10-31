@@ -44,16 +44,49 @@ const loginView = document.getElementById("login-view");
 const status = document.getElementById("setup-status");
 const loginEmailForm = document.getElementById("login-email-form");
 const loginEmail = document.getElementById("login-email");
+const loginStartButton = document.getElementById("login-start-button");
 const loginTransition = document.getElementById("login-transition");
 let transitionTimer = null;
 let loginRequestPending = false;
+let loginOpenAnimation = null;
+let loginViewTimer = null;
+function openLoginForm() {
+  if (!loginEmailForm.classList.contains("login-form-closed")) return;
+  const startRect = loginStartButton.getBoundingClientRect();
+  const arrowRect = loginEmailNext.getBoundingClientRect();
+  const delta = startRect.left + startRect.width / 2 - (arrowRect.left + arrowRect.width / 2);
+  loginEmailForm.classList.remove("login-form-closed");
+  loginEmailForm.classList.add("login-form-opening");
+  loginStartButton.classList.add("login-start-exiting");
+  loginStartButton.setAttribute("aria-expanded", "true");
+  // Roll the same yellow-circle shape from the start position to Enter.
+  if (loginEmailNext.animate && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    loginOpenAnimation?.cancel();
+    loginOpenAnimation = loginEmailNext.animate([
+      { transform: `translateX(${delta}px) rotate(-360deg)`, opacity: 1 },
+      { transform: "translateX(0) rotate(0deg)", opacity: 1 }
+    ], { duration: 670, easing: "cubic-bezier(.22, 1, .36, 1)" });
+  }
+  setTimeout(() => {
+    loginEmailForm.classList.remove("login-form-opening");
+    loginEmail.focus({ preventScroll: true });
+  }, 680);
+}
+loginStartButton.addEventListener("click", openLoginForm);
 function resetFrontDoor() {
+  clearTimeout(loginViewTimer);
   loginRequestPending = false;
+  loginOpenAnimation?.cancel();
+  loginOpenAnimation = null;
+  loginStartButton.classList.remove("login-start-exiting");
+  loginStartButton.setAttribute("aria-expanded", "false");
+  loginEmailForm.classList.add("login-form-closed");
+  loginEmailForm.classList.remove("login-form-opening");
   loginEmailForm.hidden = false;
   loginEmail.readOnly = false;
   loginEmail.value = "";
   loginEmail.placeholder = "Type your username or email to login";
-  loginEmailForm.classList.remove("login-denied", "login-approved");
+  loginEmailForm.classList.remove("login-denied", "login-approved", "login-confetti-play");
   loginTransition.hidden = true;
   loginTransition.classList.remove("is-visible", "is-complete");
   loginEmailNext.disabled = false;
@@ -436,11 +469,19 @@ function showSignedOut(message = "") {
 
 function showSignedIn() {
   resetWallet();
-  loginTransition.hidden = false;
-  loginTransition.classList.add("is-visible");
-  loginEmailForm.classList.add("login-approved");
-      loginView.hidden = true;
-  walletView.hidden = false;
+  clearTimeout(loginViewTimer);
+  loginEmailForm.classList.add("login-approved", "login-confetti-play");
+  loginEmailNext.querySelector("span").textContent = "✓";
+  loginEmail.readOnly = true;
+  loginEmailNext.disabled = true;
+  // Let the successful green-button state and confetti play before
+  // smoothly revealing the existing wallet-loading transition.
+  loginViewTimer = setTimeout(() => {
+    loginView.hidden = true;
+    walletView.hidden = false;
+    loginTransition.hidden = false;
+    loginTransition.classList.add("is-visible");
+  }, 660);
   setWalletMessage("Opening wallet...");
   beginWalletProgress("Getting your wallet ready...");
   monthLabel.textContent = formatMonth(currentMonth);
@@ -455,6 +496,7 @@ function showUnauthorized() {
   loginEmail.value = "";
   loginEmail.placeholder = "You have no access";
   loginEmailForm.classList.add("login-denied");
+  loginEmailForm.classList.remove("login-confetti-play");
   loginEmailNext.disabled = false;
   loginEmailNext.querySelector("span").textContent = "×";
   loginTransition.hidden = true;
