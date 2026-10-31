@@ -8,8 +8,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&amp;family=Google+Sans:wght@400;500;600;700&amp;family=Roboto:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
   <link rel="icon" type="image/svg+xml" href="assets/favicon.svg?v=green-dollar-1">
-  <link rel="stylesheet" href="src/styles.css?v=20261031-monthheading24">
-  <script src="src/app.js?v=20261031-monthheading24" type="module"></script>
+  <link rel="stylesheet" href="src/styles.css?v=20261031-monthlock25">
+  <script src="src/app.js?v=20261031-monthlock25" type="module"></script>
 </head>
 <body>
   <main id="app">
@@ -228,6 +228,11 @@
       </div>
     </section>
   </main>
+
+  <dialog id="month-lock-alert" class="month-lock-alert" aria-labelledby="month-lock-alert-text">
+    <p id="month-lock-alert-text">Please clear your bill to view next month</p>
+    <button type="button" id="month-lock-close">Close</button>
+  </dialog>
 
   <dialog id="wallet-dialog" class="wallet-dialog" aria-labelledby="wallet-dialog-text">
     <p id="wallet-dialog-text">Are you sure?</p>
