@@ -1426,3 +1426,6 @@ h1 { border-bottom-color: #9dd5d7; }
   --btn-bg: #ff85b8; --btn-hover: #f471aa; --btn-text: #53213b;
 }
 .hover-tooltip { color: #0d667e; border-color: #9dd5d7; }
+
+/* Keep Monthly wallet and Balance pills identical. */
+.wallet-heading-row h2 { background: #0d667e; color: #ffffff; }
