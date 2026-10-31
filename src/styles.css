@@ -1115,3 +1115,79 @@ select:focus-visible {
 .wallet-unpaid-pill { background: #ffe66d; color: #504519; }
 .wallet-balance-pill.balance-negative { background: #c74750; color: #fffafa; }
 .hold-badge { background: #ffe2df; border-color: #ffbab6; color: #aa3846; }
+
+/* Color balance refresh: airy white surfaces with warm and cool accents. */
+:root {
+  --paper: #f7fff7;
+  --subtle-line: #e1e8e4;
+}
+.brand-home { color: #1a535c; }
+.brand-wallet { color: #358d9b; }
+h1 { border-bottom-color: #4ecdc4; }
+.wallet-table-wrap,
+.other-months-table-wrap { background: #ffffff; border-color: #dbe6e5; }
+.wallet-table thead,
+.other-months-table thead { background: #ffffff; }
+.add-item-panel,
+.hover-tooltip { background: #ffffff; }
+#month-label { color: #285e78; }
+
+/* Medium-strength action colors; preserve existing button dimensions and motion. */
+.wallet-actions #other-months-button {
+  --btn-bg: #b7b4e9;
+  --btn-hover: #a5a0dd;
+  --btn-text: #302d66;
+}
+.wallet-actions #refresh-wallet-button {
+  --btn-bg: #a6d3eb;
+  --btn-hover: #8bc4e2;
+  --btn-text: #214d65;
+}
+.wallet-actions #add-item-button {
+  --btn-bg: #ffe66d;
+  --btn-hover: #f6d74e;
+  --btn-text: #5b480d;
+}
+.wallet-actions #logout-button {
+  --btn-bg: #ffb2b2;
+  --btn-hover: #ff969b;
+  --btn-text: #752d38;
+}
+.wallet-import-actions #wallet-download-template {
+  --btn-bg: #a6d3eb;
+  --btn-hover: #8bc4e2;
+  --btn-text: #214d65;
+}
+.wallet-import-actions #wallet-setup-button {
+  --btn-bg: #b7b4e9;
+  --btn-hover: #a5a0dd;
+  --btn-text: #302d66;
+}
+
+/* Light category pastels: softer than page-level actions. */
+.group-in {
+  --btn-bg: #d8f6f1;
+  --btn-hover: #c2ebe5;
+  --btn-text: #19565a;
+}
+.group-saving {
+  --btn-bg: #fff2bc;
+  --btn-hover: #ffe99c;
+  --btn-text: #625019;
+}
+.group-bills {
+  --btn-bg: #ffe1df;
+  --btn-hover: #ffd0d0;
+  --btn-text: #873d46;
+}
+.group-others,
+.group-custom {
+  --btn-bg: #e8e4fa;
+  --btn-hover: #d9d3f2;
+  --btn-text: #504575;
+}
+
+/* Preserve high-visibility financial statuses. */
+.wallet-unpaid-pill { background: #ffe66d; color: #59490e; }
+.wallet-balance-pill.balance-negative { background: #c74750; color: #fffafa; }
+.hold-badge { background: #ffe1df; border-color: #ffb6b6; color: #a63240; }
