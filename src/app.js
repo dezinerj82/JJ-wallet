@@ -592,13 +592,16 @@ function showItemTooltip(target, text) {
 
 function tooltipText(entry) {
   const meta = entry.meta;
-  if (!meta) return "";
   const lines = [];
-  if (meta.note.trim()) lines.push(meta.note.trim());
-  if (meta.hoverUnpaid && Number.isFinite(entry.unpaid)) {
+  if (meta?.note?.trim()) lines.push(meta.note.trim());
+  for (const debt of entry.carryParts || (entry.carryOver ? [entry] : [])) {
+    lines.push(formatMonth(debt.carryFrom) + " RM" +
+      formatAmount(debt.unpaid) + " pending");
+  }
+  if (meta?.hoverUnpaid && Number.isFinite(entry.unpaid)) {
     lines.push("Remaining balance : RM" + formatAmount(entry.unpaid));
   }
-  if (meta.lastService) {
+  if (meta?.lastService) {
     const effective = effectiveServiceMonth(meta, walletEntries);
     lines.push("Last service : " + formatMonth(effective));
   }
@@ -651,6 +654,26 @@ async function showDueServiceReminders() {
   }
 }
 
+function mergeCarriedRows(entries) {
+  // Presentation only: keep every original obligation for separate payments.
+  const byItem = new Map();
+  for (const entry of entries) {
+    const key = entry.item.toLocaleLowerCase("en");
+    if (!byItem.has(key)) byItem.set(key, []);
+    byItem.get(key).push(entry);
+  }
+  return [...byItem.values()].flatMap(parts => {
+    if (parts.length < 2 || !parts.some(part => part.carryOver)) return parts;
+    const current = parts.find(part => !part.carryOver) || parts[0];
+    const amount = parts.reduce((sum, part) => sum + Math.round(part.amount * 100), 0) / 100;
+    const unpaid = parts.reduce((sum, part) => sum + Math.round(part.unpaid * 100), 0) / 100;
+    return [{
+      ...current, amount, unpaid, paymentParts: parts,
+      carryParts: parts.filter(part => part.carryOver)
+    }];
+  });
+}
+
 function renderTable(month, target, groupStates, fromComparison = false) {
   const groups = entriesForMonth(walletEntries, month);
   let savingPlan = null;
@@ -664,7 +687,7 @@ function renderTable(month, target, groupStates, fromComparison = false) {
   const rows = document.createDocumentFragment();
 
   for (const group of availableGroups(walletEntries)) {
-    const entries = groups[group];
+    const entries = mergeCarriedRows(groups[group]);
     const expanded = groupStates.get(group) !== false;
     const headingRow = document.createElement("tr");
     headingRow.className = "group-heading";
@@ -752,7 +775,8 @@ function renderTable(month, target, groupStates, fromComparison = false) {
       if (editable) {
         editButton.addEventListener("click", () => {
           if (entry.group === "Saving") openSavingSettings(entry);
-          else openUpdateForm(entry);
+          else openUpdateForm(entry.paymentParts
+            ? entry.paymentParts.find(part => !part.carryOver) || entry : entry);
           if (fromComparison) {
             const panel = entry.group === "Saving" ? savingsPanel : addPanel;
             panel.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -762,12 +786,17 @@ function renderTable(month, target, groupStates, fromComparison = false) {
       actionCell.append(editButton);
       if (month === currentMonth && entry.group !== "IN" &&
           entry.group !== "Saving" && entry.unpaid > 0) {
-        const payButton = document.createElement("button");
-        payButton.type = "button";
-        payButton.className = "pay-item-button";
-        payButton.textContent = "Pay";
-        payButton.addEventListener("click", () => openPayPanel(entry));
-        actionCell.append(payButton);
+        const parts = entry.paymentParts || [entry];
+        for (const part of parts) {
+          if (part.unpaid <= 0) continue;
+          const payButton = document.createElement("button");
+          payButton.type = "button";
+          payButton.className = "pay-item-button";
+          payButton.textContent = parts.length === 1 ? "Pay" :
+            "Pay " + formatMonth(part.carryOver ? part.carryFrom : part.month);
+          payButton.addEventListener("click", () => openPayPanel(part));
+          actionCell.append(payButton);
+        }
       }
       row.append(actionCell);
       rows.append(row);
