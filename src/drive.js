@@ -253,7 +253,7 @@ function validateEntry(entry) {
   }
   const rawOpeningUnpaid = String(entry?.openingUnpaid ?? "0").trim();
   if (group === "Others" &&
-      !/^(?:0|[1-9]\\d{0,11})(?:\\.\\d{1,2})?$/.test(rawOpeningUnpaid)) {
+      !/^(?:0|[1-9]\d{0,11})(?:\.\d{1,2})?$/.test(rawOpeningUnpaid)) {
     throw new Error("Enter a valid unpaid balance.");
   }
   const openingUnpaid = group === "Others" ? Number(rawOpeningUnpaid) : 0;
