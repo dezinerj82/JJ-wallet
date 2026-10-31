@@ -1317,3 +1317,112 @@ h1 { border-bottom-color: #bcdddc; }
 .wallet-dialog { background: #ffffff; color: #355e58; border-color: #bcdddc; }
 .hover-tooltip { color: #355e58; border-color: #bcdddc; }
 .currency-select { color: #355e58; border-color: #72b0ab; background: #ffffff; }
+
+/* Pencil-pouch theme: user-assigned colors, crisp white canvas. */
+:root {
+  --paper: #ffffff;
+  --ink: #0d667e;
+  --stormy-teal: #0d667e;
+  --soft-indigo: #0d667e;
+  --pearl-aqua: #9dd5d7;
+  --alice-blue: #e8f5f6;
+  --almond-silk: #ffbdc9;
+  --tangerine-dream: #ff85b8;
+  --sunshine-gold: #f7bd4b;
+  --subtle-line: #d7e7e9;
+  --soft-shadow: 0 5px 12px rgba(13, 102, 126, .10), 0 2px 4px rgba(13, 102, 126, .06);
+  background: #ffffff;
+  color: #0d667e;
+}
+html, body { background: #ffffff; color: #0d667e; }
+h1 { border-bottom-color: #9dd5d7; }
+.brand-home { color: #0d667e; }
+.brand-wallet { color: #75b5b7; }
+.wallet-heading-row h2,
+.wallet-balance-pill:not(.balance-negative):not(.wallet-unpaid-pill) {
+  background: #0d667e;
+  color: #ffffff;
+}
+#month-label, .wallet-table th, .wallet-table td,
+.other-months-table th, .other-months-table td { color: #0d667e; }
+.wallet-table thead th, .other-months-table thead th { border-bottom-color: #0d667e; }
+.wallet-table-wrap, .other-months-table-wrap { border-color: #d7e7e9; }
+.wallet-table-wrap, .other-months-table-wrap,
+.wallet-table, .other-months-table,
+.wallet-table thead, .other-months-table thead,
+.add-item-panel, .hover-tooltip { background: #ffffff; }
+.currency-select { background: #ffffff; border-color: #9dd5d7; color: #0d667e; }
+.wallet-dialog { background: #ffffff; color: #0d667e; border-color: #9dd5d7; }
+
+/* Exact screenshot assignment: distinctive but balanced action colors. */
+.wallet-actions #other-months-button {
+  --btn-bg: #9dd5d7;
+  --btn-hover: #8bc6ca;
+  --btn-text: #124e60;
+}
+.wallet-actions #refresh-wallet-button {
+  --btn-bg: #ffbdc9;
+  --btn-hover: #f8acbd;
+  --btn-text: #6d2942;
+}
+.wallet-actions #add-item-button {
+  --btn-bg: #f7bd4b;
+  --btn-hover: #e9af3b;
+  --btn-text: #533c0d;
+}
+.wallet-actions #logout-button {
+  --btn-bg: #ff85b8;
+  --btn-hover: #f471aa;
+  --btn-text: #53213b;
+}
+.wallet-import-actions #wallet-download-template {
+  --btn-bg: #9dd5d7;
+  --btn-hover: #8bc6ca;
+  --btn-text: #124e60;
+}
+.wallet-import-actions #wallet-setup-button {
+  --btn-bg: #f7bd4b;
+  --btn-hover: #e9af3b;
+  --btn-text: #533c0d;
+}
+
+/* Pale highlighter versions of the palette for category pills. */
+.group-toggle, .group-in {
+  --btn-bg: #e3f4f5;
+  --btn-hover: #d4ecee;
+  --btn-text: #0d667e;
+}
+.group-saving {
+  --btn-bg: #fff3d9;
+  --btn-hover: #ffeac3;
+  --btn-text: #68501e;
+}
+.group-bills {
+  --btn-bg: #ffe6ec;
+  --btn-hover: #ffd8e2;
+  --btn-text: #813a50;
+}
+.group-others, .group-custom {
+  --btn-bg: #ffebf3;
+  --btn-hover: #ffdeec;
+  --btn-text: #793657;
+}
+.wallet-unpaid-pill { background: #fff0cf; color: #68501e; }
+.wallet-balance-pill.balance-negative { background: #b94460; color: #ffffff; }
+.hold-badge { background: #ffe6ec; border-color: #ffbdc9; color: #8e3550; }
+.wallet-balance-warning, .saving-plan-adjusted { color: #993e55; }
+
+/* Surrounding controls and dividers follow their nearest palette. */
+#pay-item-button, .pay-item-button,
+#cancel-item-button, #saving-settings-cancel,
+#pay-item-cancel, #wallet-dialog-cancel {
+  --btn-bg: #9dd5d7; --btn-hover: #8bc6ca; --btn-text: #124e60;
+}
+#submit-item-button, #saving-settings-save,
+#pay-item-save, #wallet-dialog-ok {
+  --btn-bg: #f7bd4b; --btn-hover: #e9af3b; --btn-text: #533c0d;
+}
+#delete-item-button {
+  --btn-bg: #ff85b8; --btn-hover: #f471aa; --btn-text: #53213b;
+}
+.hover-tooltip { color: #0d667e; border-color: #9dd5d7; }
