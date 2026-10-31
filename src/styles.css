@@ -1,7 +1,7 @@
 /* Home wallet — Google Sans family, calm table, colour-coded group pills. */
 :root {
   color-scheme: light;
-  font-family: "Google Sans", sans-serif;
+  font-family: "Nunito", "Google Sans", "Roboto", "Segoe UI", sans-serif;
   --stormy-teal: #1a535c;
   --pearl-aqua: #4ecdc4;
   --alice-blue: #e8f8f5;
