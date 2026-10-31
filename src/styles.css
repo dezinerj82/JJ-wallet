@@ -2,17 +2,17 @@
 :root {
   color-scheme: light;
   font-family: "Google Sans", sans-serif;
-  --stormy-teal: #006d77;
-  --pearl-aqua: #83c5be;
-  --alice-blue: #edf6f9;
-  --almond-silk: #ffddd2;
-  --tangerine-dream: #e29578;
-  --sunshine-gold: #ffc857;
-  --soft-indigo: #5964a8;
-  --paper: #ffffff;
-  --ink: #006d77;
-  --subtle-line: #e1e7e8;
-  --soft-shadow: 0 5px 12px rgba(0, 71, 78, .10), 0 2px 4px rgba(0, 71, 78, .06);
+  --stormy-teal: #1a535c;
+  --pearl-aqua: #4ecdc4;
+  --alice-blue: #e8f8f5;
+  --almond-silk: #ffe3df;
+  --tangerine-dream: #ff6b6b;
+  --sunshine-gold: #ffe66d;
+  --soft-indigo: #1a535c;
+  --paper: #f7fff7;
+  --ink: #1a535c;
+  --subtle-line: #d5e9e5;
+  --soft-shadow: 0 5px 12px rgba(26, 83, 92, .10), 0 2px 4px rgba(26, 83, 92, .06);
   color: var(--ink);
   background: var(--paper);
 }
@@ -50,8 +50,8 @@ p { line-height: 1.5; }
 /* All buttons: pill shape, same-tone hover, gentle press and release. */
 button {
   --btn-bg: var(--alice-blue);
-  --btn-hover: #d9edf3;
-  --btn-text: #005c66;
+  --btn-hover: #d2f2ec;
+  --btn-text: #1a535c;
   appearance: none;
   border: 0;
   border-radius: 999px;
@@ -101,8 +101,8 @@ select:focus-visible {
 #login-view h2 { margin: .4rem 0 .9rem; }
 #login-button {
   --btn-bg: var(--sunshine-gold);
-  --btn-hover: #ffd782;
-  --btn-text: #493815;
+  --btn-hover: #fff09a;
+  --btn-text: #594910;
 }
 .remember-label {
   display: flex;
@@ -117,20 +117,20 @@ select:focus-visible {
   height: 1.12rem;
   accent-color: var(--stormy-teal);
 }
-#unauthorized-view strong { color: #963e36; }
+#unauthorized-view strong { color: #a63240; }
 #unauthorized-logout-button,
 #logout-button,
 #cancel-item-button {
   --btn-bg: var(--almond-silk);
-  --btn-hover: #ffd0c0;
-  --btn-text: #763c2c;
+  --btn-hover: #ffc4c1;
+  --btn-text: #81343a;
 }
 /* Richer peach brings Sign out to the same visual strength as Refresh and Add. */
 #logout-button,
 #unauthorized-logout-button {
-  --btn-bg: #f3a998;
-  --btn-hover: #eda28f;
-  --btn-text: #5e2b25;
+  --btn-bg: #ff9999;
+  --btn-hover: #ff8585;
+  --btn-text: #723039;
 }
 
 /* Wallet heading: prominent bubble, then narrow small actions. */
@@ -170,20 +170,20 @@ select:focus-visible {
 /* Matching visual weight across the entire action row: aqua, gold, coral and indigo. */
 #other-months-button,
 #wallet-setup-button {
-  --btn-bg: #a8b1df;
-  --btn-hover: #929dd2;
-  --btn-text: #253068;
+  --btn-bg: #78c7be;
+  --btn-hover: #56b3ac;
+  --btn-text: #17474e;
 }
 #refresh-wallet-button {
   --btn-bg: var(--pearl-aqua);
-  --btn-hover: #a7d9d2;
-  --btn-text: #004b51;
+  --btn-hover: #73dad0;
+  --btn-text: #17474e;
 }
 #add-item-button,
 #submit-item-button {
   --btn-bg: var(--sunshine-gold);
-  --btn-hover: #ffd782;
-  --btn-text: #493815;
+  --btn-hover: #fff09a;
+  --btn-text: #594910;
 }
 
 /* The selected month and month controls are the shared table text size. */
@@ -201,8 +201,8 @@ select:focus-visible {
 }
 .month-nav button {
   --btn-bg: var(--alice-blue);
-  --btn-hover: #d8edf3;
-  --btn-text: #005c66;
+  --btn-hover: #d8f5ef;
+  --btn-text: #1a535c;
   min-height: 2.3rem;
   padding: .5rem .95rem;
   font-size: .9rem;
@@ -276,9 +276,9 @@ select:focus-visible {
   font-size: .9rem;
   font-weight: 600;
   letter-spacing: .005em;
-  --btn-bg: #d9efec;
-  --btn-hover: #c8e6e1;
-  --btn-text: #005960;
+  --btn-bg: #d9f7f1;
+  --btn-hover: #c8eee6;
+  --btn-text: #1a535c;
   box-shadow: 0 3px 8px rgba(0, 71, 78, .08);
 }
 .group-toggle::after {
@@ -294,25 +294,25 @@ select:focus-visible {
   transform: translateY(1px) rotate(-45deg);
 }
 .group-in {
-  --btn-bg: #d9efec;
-  --btn-hover: #c8e6e1;
-  --btn-text: #005960;
+  --btn-bg: #d9f7f1;
+  --btn-hover: #c8eee6;
+  --btn-text: #1a535c;
 }
 .group-saving {
-  --btn-bg: #fff0ca;
-  --btn-hover: #ffe5ad;
-  --btn-text: #665018;
+  --btn-bg: #fff5c9;
+  --btn-hover: #ffedaa;
+  --btn-text: #65501c;
 }
 .group-bills {
-  --btn-bg: #ffebe4;
-  --btn-hover: #ffdfd4;
-  --btn-text: #783f30;
+  --btn-bg: #ffe4e2;
+  --btn-hover: #ffd4d2;
+  --btn-text: #813b42;
 }
 .group-others,
 .group-custom {
-  --btn-bg: #e7e8f7;
-  --btn-hover: #d9dcf1;
-  --btn-text: #404a82;
+  --btn-bg: #e1f1ed;
+  --btn-hover: #caeae3;
+  --btn-text: #285f65;
 }
 .empty-row td {
   padding: .65rem 1.25rem 1rem;
@@ -336,7 +336,7 @@ select:focus-visible {
 .update-item-button {
   --btn-bg: transparent;
   --btn-hover: var(--alice-blue);
-  --btn-text: #005c66;
+  --btn-text: #1a535c;
   position: relative;
   width: 1.75rem;
   height: 1.5rem;
@@ -434,7 +434,7 @@ select:focus-visible {
 .add-grid input:disabled,
 .add-grid input[readonly],
 .add-grid select:disabled {
-  background: #f5f7f7;
+  background: #eef7f3;
   opacity: .78;
   cursor: not-allowed;
 }
@@ -481,16 +481,16 @@ select:focus-visible {
   font-weight: 500;
 }
 #delete-item-button {
-  --btn-bg: #f3a998;
-  --btn-hover: #eda28f;
-  --btn-text: #5e2b25;
+  --btn-bg: #ff9999;
+  --btn-hover: #ff8585;
+  --btn-text: #723039;
 }
 #cancel-item-button {
   --btn-bg: var(--pearl-aqua);
-  --btn-hover: #a7d9d2;
-  --btn-text: #004b51;
+  --btn-hover: #73dad0;
+  --btn-text: #17474e;
 }
-.form-status { color: #91372c; font-size: .96rem; min-height: 1rem; }
+.form-status { color: #a23943; font-size: .96rem; min-height: 1rem; }
 .visually-hidden {
   position: absolute !important;
   width: 1px !important;
@@ -503,7 +503,7 @@ select:focus-visible {
   border: 0 !important;
 }
 .wallet-message-error {
-  color: #91372c;
+  color: #a23943;
   font-weight: 600;
   border-left: 3px solid var(--tangerine-dream);
   padding: .6rem .85rem;
@@ -558,7 +558,7 @@ select:focus-visible {
   /* Drag/resize only the floating window; never modify the main page. */
   resize: none;
   background: var(--paper);
-  border: 1px solid #d5dce5;
+  border: 1px solid #c6e5de;
   border-radius: 18px;
   box-shadow: 0 20px 55px rgba(32, 49, 75, .22), 0 6px 16px rgba(32, 49, 75, .1);
 }
@@ -596,8 +596,8 @@ select:focus-visible {
 }
 .other-months-close {
   --btn-bg: var(--almond-silk);
-  --btn-hover: #ffd0c0;
-  --btn-text: #763c2c;
+  --btn-hover: #ffc4c1;
+  --btn-text: #81343a;
   flex: 0 0 auto;
   width: 2rem;
   height: 2rem;
@@ -625,8 +625,8 @@ select:focus-visible {
 }
 .other-months-nav button {
   --btn-bg: var(--alice-blue);
-  --btn-hover: #d9edf3;
-  --btn-text: #005c66;
+  --btn-hover: #d2f2ec;
+  --btn-text: #1a535c;
   min-height: 2.05rem;
   padding: .43rem .8rem;
   font-size: .83rem;
@@ -741,7 +741,7 @@ select:focus-visible {
   cursor: pointer;
   transition: background-color 190ms ease, border-color 190ms ease;
 }
-.currency-select:hover { background: #dceff2; }
+.currency-select:hover { background: #d7f4ec; }
 .currency-select:focus-visible {
   outline: 3px solid var(--tangerine-dream);
   outline-offset: 2px;
@@ -752,7 +752,7 @@ select:focus-visible {
   flex-wrap: wrap;
   gap: .25rem .65rem;
   margin: .75rem .2rem 0;
-  color: #4f7178;
+  color: #3b7278;
   font-size: .83rem;
   line-height: 1.45;
 }
@@ -895,13 +895,13 @@ select:focus-visible {
 #saving-settings-name { font-weight: 600; }
 #saving-settings-cancel {
   --btn-bg: var(--pearl-aqua);
-  --btn-hover: #a7d9d2;
-  --btn-text: #004b51;
+  --btn-hover: #73dad0;
+  --btn-text: #17474e;
 }
 #saving-settings-save {
   --btn-bg: var(--sunshine-gold);
-  --btn-hover: #ffd782;
-  --btn-text: #493815;
+  --btn-hover: #fff09a;
+  --btn-text: #594910;
 }
 #saving-settings-panel .form-actions-right button {
   min-height: 2.35rem; padding: .53rem 1.05rem; font-size: .9rem;
@@ -924,9 +924,9 @@ select:focus-visible {
   min-width: 10rem;
   padding: .8rem 1rem;
   border-radius: 14px;
-  border: 1px solid #d5dce5;
+  border: 1px solid #c6e5de;
   background: var(--paper);
-  color: #253068;
+  color: #17474e;
   white-space: pre-line;
   overflow-wrap: anywhere;
   text-align: left;
@@ -941,10 +941,10 @@ select:focus-visible {
   max-width: none;
   margin: auto;
   padding: 1.6rem 1.3rem 1.3rem;
-  border: 1px solid #c7d1df;
+  border: 1px solid #b9ded7;
   border-radius: 22px;
   background: var(--alice-blue);
-  color: #253068;
+  color: #17474e;
   box-shadow: 0 18px 55px rgba(32, 49, 75, .24);
   text-align: center;
 }
@@ -952,8 +952,8 @@ select:focus-visible {
 .wallet-dialog p { margin: 0 0 1.3rem; font-size: 1.2rem; font-weight: 600; }
 .wallet-dialog-actions { display: flex; justify-content: center; gap: .7rem; }
 .wallet-dialog-actions button { min-height: 2.35rem; padding: .53rem 1.25rem; font-size: .9rem; }
-#wallet-dialog-cancel { --btn-bg: var(--pearl-aqua); --btn-hover: #a7d9d2; --btn-text: #004b51; }
-#wallet-dialog-ok { --btn-bg: var(--sunshine-gold); --btn-hover: #ffd782; --btn-text: #493815; }
+#wallet-dialog-cancel { --btn-bg: var(--pearl-aqua); --btn-hover: #73dad0; --btn-text: #17474e; }
+#wallet-dialog-ok { --btn-bg: var(--sunshine-gold); --btn-hover: #fff09a; --btn-text: #594910; }
 
 /* A savings target is a plan, not money added to the saved balance. */
 .setting-note input[type="number"] {
@@ -970,14 +970,14 @@ select:focus-visible {
 .saving-plan-detail {
   display: block;
   margin-top: .18rem;
-  color: #404a82;
+  color: #285f65;
   font-size: .81rem;
   font-weight: 500;
   line-height: 1.35;
   white-space: nowrap;
 }
 .saving-plan-adjusted {
-  color: #87422e;
+  color: #985044;
   font-weight: 600;
 }
 .other-months-table .saving-plan-detail {
@@ -987,28 +987,28 @@ select:focus-visible {
 
 .wallet-balance-row { gap: .7rem; }
 .wallet-balance-warning {
-  color: #87422e;
+  color: #985044;
   font-size: .86rem;
   font-weight: 600;
 }
 
 /* Financial status: no hidden negative balances or altered payment records. */
 .wallet-balance-pill.balance-negative {
-  background: #b4494c;
-  color: #fffaf8;
+  background: #c74750;
+  color: #fffafa;
   box-shadow: 0 5px 15px rgba(130, 38, 42, .22);
 }
 .wallet-unpaid-pill {
-  background: #a8b1df;
-  color: #253068;
+  background: #78c7be;
+  color: #17474e;
 }
 .hold-badge {
   display: inline-flex;
   align-items: center;
   border-radius: 999px;
-  background: #ffe7e4;
-  border: 1px solid #eebdb9;
-  color: #a2363b;
+  background: #ffe2df;
+  border: 1px solid #ffbab6;
+  color: #aa3846;
   padding: .14rem .46rem;
   margin-right: .4rem;
   font-size: .72rem;
@@ -1019,9 +1019,9 @@ select:focus-visible {
   white-space: nowrap;
 }
 .pay-item-button {
-  --btn-bg: #83c5be;
-  --btn-hover: #a7d9d2;
-  --btn-text: #004b51;
+  --btn-bg: #4ecdc4;
+  --btn-hover: #73dad0;
+  --btn-text: #17474e;
   border-radius: 999px;
   padding: .36rem .7rem;
   margin-left: .35rem;
@@ -1031,13 +1031,13 @@ select:focus-visible {
 #pay-item-name { font-weight: 600; }
 #pay-item-cancel {
   --btn-bg: var(--pearl-aqua);
-  --btn-hover: #a7d9d2;
-  --btn-text: #004b51;
+  --btn-hover: #73dad0;
+  --btn-text: #17474e;
 }
 #pay-item-save {
   --btn-bg: var(--sunshine-gold);
-  --btn-hover: #ffd782;
-  --btn-text: #493815;
+  --btn-hover: #fff09a;
+  --btn-text: #594910;
 }
 #pay-item-panel .form-actions-right button {
   font-size: .9rem;
@@ -1045,9 +1045,9 @@ select:focus-visible {
   padding: .53rem 1.05rem;
 }
 #wallet-download-template {
-  --btn-bg: #d8e9ed;
-  --btn-hover: #c3dfe6;
-  --btn-text: #214b60;
+  --btn-bg: #d9f4ed;
+  --btn-hover: #bfe9df;
+  --btn-text: #215c60;
 }
 @media (max-width: 600px) {
   .wallet-balance-row { flex-wrap: wrap; }
@@ -1058,9 +1058,9 @@ select:focus-visible {
 /* Consistent medium-tone controls, distinct from large pills and table controls. */
 .wallet-actions button,
 .wallet-import-actions button {
-  --btn-bg: #a8b1df;
-  --btn-hover: #929dd2;
-  --btn-text: #253068;
+  --btn-bg: #78c7be;
+  --btn-hover: #56b3ac;
+  --btn-text: #17474e;
   font-size: .9rem;
   min-height: 2.35rem;
   padding: .53rem 1.05rem;
@@ -1070,9 +1070,9 @@ select:focus-visible {
 #logout-button,
 #wallet-download-template,
 #wallet-setup-button {
-  --btn-bg: #a8b1df;
-  --btn-hover: #929dd2;
-  --btn-text: #253068;
+  --btn-bg: #78c7be;
+  --btn-hover: #56b3ac;
+  --btn-text: #17474e;
 }
 .wallet-import-actions { display: flex; align-items: center; gap: .5rem; margin-right: auto; }
 .wallet-balance-row { flex-wrap: wrap; }
@@ -1080,3 +1080,38 @@ select:focus-visible {
   .wallet-import-actions { gap: .4rem; }
   .wallet-import-actions button { padding: .55rem .85rem; }
 }
+
+/* 2026 palette: deep teal, turquoise, soft ivory, coral and sunny yellow.
+   Medium controls stay darker than table category pills and lighter than headings. */
+:root {
+  --stormy-teal: #1a535c;
+  --pearl-aqua: #4ecdc4;
+  --alice-blue: #e8f8f5;
+  --almond-silk: #ffe3df;
+  --tangerine-dream: #ff6b6b;
+  --sunshine-gold: #ffe66d;
+  --soft-indigo: #1a535c;
+  --paper: #f7fff7;
+  --ink: #1a535c;
+  --subtle-line: #d5e9e5;
+}
+.brand-wallet { color: #278b86; }
+.wallet-actions button,
+.wallet-import-actions button,
+#other-months-button,
+#refresh-wallet-button,
+#add-item-button,
+#logout-button,
+#wallet-download-template,
+#wallet-setup-button {
+  --btn-bg: #79c9c1;
+  --btn-hover: #55b8b1;
+  --btn-text: #153f47;
+}
+.group-in { --btn-bg: #d9f7f1; --btn-hover: #c8eee6; --btn-text: #1a535c; }
+.group-saving { --btn-bg: #fff5c9; --btn-hover: #ffedaa; --btn-text: #65501c; }
+.group-bills { --btn-bg: #ffe4e2; --btn-hover: #ffd4d2; --btn-text: #813b42; }
+.group-others, .group-custom { --btn-bg: #e1f1ed; --btn-hover: #caeae3; --btn-text: #285f65; }
+.wallet-unpaid-pill { background: #ffe66d; color: #504519; }
+.wallet-balance-pill.balance-negative { background: #c74750; color: #fffafa; }
+.hold-badge { background: #ffe2df; border-color: #ffbab6; color: #aa3846; }
