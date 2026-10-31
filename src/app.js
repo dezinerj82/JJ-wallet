@@ -1379,6 +1379,122 @@ function openUpdateForm(entry) {
   addAmount.focus();
 }
 
+function clearBillEntries(month) {
+  const displayed = entriesForMonth(walletEntries, month);
+  const result = [];
+  const calendarMonth = monthKey(new Date());
+  for (const group of availableGroups(walletEntries)) {
+    if (!isExpenseGroup(group)) continue;
+    for (const entry of displayed[group] || []) {
+      const originMonth = entry.carryOver ? entry.carryFrom : entry.month;
+      const original = walletEntries.find(row => row.group === group &&
+        row.item.toLocaleLowerCase("en") === entry.item.toLocaleLowerCase("en") &&
+        row.month === originMonth);
+      if (!original) continue;
+      const unpaid = effectiveUnpaid(original, calendarMonth);
+      result.push({
+        ...original, month, unpaid,
+        carryOver: originMonth < calendarMonth,
+        carryFrom: originMonth
+      });
+    }
+  }
+  return result;
+}
+function closeClearBillPanel() {
+  clearBillPanel.hidden = true;
+  clearBillParts = [];
+  clearBillStatus.textContent = "";
+  clearBillRows.replaceChildren();
+}
+function openClearBillPanel() {
+  const month = selectedMonth;
+  if (!activeFolderId || !getDriveToken() || !walletBalanceComplete ||
+      closedMonths.has(month) || month > monthKey(new Date())) return;
+  closeAddPanel();
+  closePayPanel();
+  closeSavingSettings();
+  closeClearBillPanel();
+  clearBillParts = clearBillEntries(month);
+  for (const entry of clearBillParts) {
+    const label = document.createElement("label");
+    label.className = "clear-bill-name";
+    label.textContent = entry.item + (entry.carryOver &&
+      entry.carryFrom !== month ? " · " + formatMonth(entry.carryFrom) : "");
+    const input = document.createElement("input");
+    input.type = "number";
+    input.min = "0";
+    input.max = String(entry.unpaid);
+    input.step = "0.01";
+    input.inputMode = "decimal";
+    input.required = true;
+    input.value = entry.unpaid.toFixed(2);
+    input.setAttribute("aria-label", "Payment for " + label.textContent + " (RM)");
+    clearBillRows.append(label, input);
+    entry.paymentInput = input;
+  }
+  if (!clearBillParts.length) {
+    const empty = document.createElement("p");
+    empty.className = "clear-bill-empty";
+    empty.textContent = "No bills recorded for this month.";
+    clearBillRows.append(empty);
+  }
+  clearBillPanel.hidden = false;
+  clearBillPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+clearBillButton.addEventListener("click", openClearBillPanel);
+clearBillCancel.addEventListener("click", closeClearBillPanel);
+clearBillForm.addEventListener("submit", async event => {
+  event.preventDefault();
+  if (!activeFolderId || !getDriveToken() || !walletBalanceComplete ||
+      closedMonths.has(selectedMonth)) return;
+  if (!validateWalletForm(clearBillForm, clearBillStatus)) return;
+  const month = selectedMonth;
+  const payments = [];
+  for (const entry of clearBillParts) {
+    const value = Number(entry.paymentInput.value);
+    if (!Number.isFinite(value) || value < 0 ||
+        !Number.isSafeInteger(Math.round(value * 100)) ||
+        Math.round(value * 100) > Math.round(entry.unpaid * 100)) {
+      clearBillStatus.textContent = "Check the payment amount for " + entry.item + ".";
+      entry.paymentInput.focus();
+      return;
+    }
+    if (Math.round(value * 100) > 0) payments.push({ entry, amount: value.toFixed(2) });
+  }
+  const confirmed = await confirmWallet("Clear " + formatMonth(month) +
+    "? Remaining unpaid bills will carry forward.");
+  if (!confirmed) return;
+  const version = connectionVersion;
+  clearBillSubmit.disabled = true;
+  clearBillCancel.disabled = true;
+  clearBillButton.disabled = true;
+  clearBillStatus.textContent = "";
+  let completed = 0;
+  try {
+    for (const payment of payments) {
+      await recordBillPayment(getDriveToken(), activeFolderId,
+        payment.entry, payment.amount);
+      completed++;
+    }
+    await closeWalletMonth(getDriveToken(), activeFolderId, month);
+    if (version !== connectionVersion) return;
+    closeClearBillPanel();
+    await loadWalletRecords("Refreshing after month closure...");
+  } catch (error) {
+    if (version === connectionVersion) {
+      clearBillStatus.textContent = completed
+        ? "Some payments were saved, but the month was not closed. Refresh before retrying. " +
+          (error.message || "")
+        : error.message || "Couldn't clear the month. Refresh and retry.";
+    }
+  } finally {
+    clearBillSubmit.disabled = false;
+    clearBillCancel.disabled = false;
+    if (version === connectionVersion) clearBillButton.disabled = false;
+  }
+});
+
 function closePayPanel() {
   clearFormValidation(payForm);
   payPanel.hidden = true;
