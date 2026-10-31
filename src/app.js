@@ -599,19 +599,28 @@ function hideItemTooltip() {
   hoverTooltip.hidden = true;
 }
 
-function showItemTooltip(target, text) {
+function positionItemTooltip(x, y) {
+  const width = hoverTooltip.offsetWidth;
+  const height = hoverTooltip.offsetHeight;
+  const gap = 24;
+  const margin = 10;
+  // Prefer the right of the cursor; flip left when near the viewport edge.
+  const right = x + gap;
+  const left = right + width <= window.innerWidth - margin
+    ? right : Math.max(margin, x - width - gap);
+  hoverTooltip.style.left = Math.min(left, Math.max(margin, window.innerWidth - width - margin)) + "px";
+  hoverTooltip.style.top = Math.max(margin,
+    Math.min(y + 12, window.innerHeight - height - margin)) + "px";
+}
+function showItemTooltip(target, text, group, pointer = null) {
   if (!text) return;
   hoverTooltip.textContent = text;
+  hoverTooltip.className = "hover-tooltip group-" +
+    (isCustomGroup(group) ? "custom" : group.toLowerCase());
   hoverTooltip.hidden = false;
   const rect = target.getBoundingClientRect();
-  const width = hoverTooltip.getBoundingClientRect().width;
-  const height = hoverTooltip.getBoundingClientRect().height;
-  const left = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8));
-  const top = rect.top >= height + 14
-    ? rect.top - height - 8
-    : Math.min(window.innerHeight - height - 8, rect.bottom + 8);
-  hoverTooltip.style.left = left + "px";
-  hoverTooltip.style.top = Math.max(8, top) + "px";
+  positionItemTooltip(pointer?.clientX ?? rect.right,
+    pointer?.clientY ?? rect.top);
 }
 
 function tooltipText(entry) {
@@ -652,9 +661,13 @@ function addItemNameCell(row, entry, isHold = false) {
     label.className = "wallet-item-note";
     label.tabIndex = 0;
     label.setAttribute("aria-label", entry.item + ". " + note.replace(/\n/g, " "));
-    label.addEventListener("pointerenter", () => showItemTooltip(label, note));
+    label.addEventListener("pointerenter", event =>
+      showItemTooltip(label, note, entry.group, event));
+    label.addEventListener("pointermove", event => {
+      if (!hoverTooltip.hidden) positionItemTooltip(event.clientX, event.clientY);
+    });
     label.addEventListener("pointerleave", hideItemTooltip);
-    label.addEventListener("focus", () => showItemTooltip(label, note));
+    label.addEventListener("focus", () => showItemTooltip(label, note, entry.group));
     label.addEventListener("blur", hideItemTooltip);
   }
   cell.append(label);
