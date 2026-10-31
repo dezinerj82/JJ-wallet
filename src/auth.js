@@ -16,6 +16,7 @@ let expiresAt = 0;
 let signedInSubject = null;
 let handlers = null;
 let requestedEmail = "";
+let signedInEmail = "";
 
 async function isAuthorisedEmail(email) {
   const data = new TextEncoder().encode(String(email).trim().toLowerCase());
@@ -33,6 +34,7 @@ function clearTokens() {
   accessToken = null;
   expiresAt = 0;
   signedInSubject = null;
+  signedInEmail = "";
 }
 
 function saveShortSession() {
@@ -42,7 +44,8 @@ function saveShortSession() {
   // It disappears when the tab closes, expires, or the user signs out.
   try {
     sessionStorage.setItem(SESSION_KEY, JSON.stringify({
-      token: accessToken, expiresAt, subject: signedInSubject, scope: REQUESTED_SCOPES
+      token: accessToken, expiresAt, subject: signedInSubject,
+      email: signedInEmail, scope: REQUESTED_SCOPES
     }));
   } catch { /* The user can still sign in normally. */ }
 }
@@ -93,6 +96,7 @@ async function receiveLoginToken(response) {
     accessToken = response.access_token;
     expiresAt = expiry;
     signedInSubject = account.sub;
+    signedInEmail = account.email.trim().toLowerCase();
     saveShortSession();
 
     handlers.onSignedIn(account.email);
@@ -120,7 +124,15 @@ function loadGoogleLibrary() {
 
 // Restore only a currently valid SAME-TAB token. Verify the actual Google account
 // and Drive permission again; a local "remember me" flag never grants access.
-export async function restoreLoginSession() {
+export function canRestoreLoginSession(email) {
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(SESSION_KEY) || "null");
+    return Boolean(saved && saved.email === String(email || "").trim().toLowerCase() &&
+      typeof saved.token === "string" && Number.isFinite(saved.expiresAt) &&
+      saved.expiresAt > Date.now() && saved.expiresAt <= Date.now() + 2 * 60 * 60 * 1000);
+  } catch { return false; }
+}
+export async function restoreLoginSession(expectedEmail) {
   clearTokens();
   if (!handlers?.shouldRememberSession?.()) {
     clearStoredSession();
@@ -134,6 +146,7 @@ export async function restoreLoginSession() {
       !Number.isFinite(saved.expiresAt) || saved.expiresAt <= Date.now() ||
       saved.expiresAt > Date.now() + 2 * 60 * 60 * 1000 ||
       !saved.subject || typeof saved.subject !== "string" ||
+      saved.email !== String(expectedEmail || "").trim().toLowerCase() ||
       !String(saved.scope).split(/\s+/).includes(DRIVE_SCOPE)) {
     clearStoredSession();
     return false;
@@ -141,7 +154,9 @@ export async function restoreLoginSession() {
 
   try {
     const account = await getVerifiedAccount(saved.token);
-    if (account.sub !== saved.subject || !(await isAuthorisedEmail(account.email))) {
+    if (account.sub !== saved.subject ||
+        account.email.trim().toLowerCase() !== String(expectedEmail || "").trim().toLowerCase() ||
+        !(await isAuthorisedEmail(account.email))) {
       clearStoredSession();
       handlers.onUnauthorized(account.email);
       return true;
@@ -149,6 +164,7 @@ export async function restoreLoginSession() {
     accessToken = saved.token;
     expiresAt = saved.expiresAt;
     signedInSubject = account.sub;
+    signedInEmail = account.email.trim().toLowerCase();
     handlers.onSignedIn(account.email);
     await handlers.onDriveReady();
     return true;
