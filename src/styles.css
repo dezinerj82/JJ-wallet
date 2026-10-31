@@ -1519,3 +1519,59 @@ h1 { border-bottom-color: #9dd5d7; }
 @media (prefers-reduced-motion: reduce) {
   .login-transition, .login-transition-check, .login-transition p { transition: none; }
 }
+
+/* Other months hover trial v2: sliding pill behind the moving accent. */
+.wallet-actions #other-months-button {
+  --trial-fill: #9dd5d7;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background: transparent;
+  color: #0d667e;
+  box-shadow: none;
+  transform: none;
+  transition: color 380ms ease;
+}
+.wallet-actions #other-months-button::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--trial-fill);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 430ms cubic-bezier(.22, 1, .36, 1);
+  pointer-events: none;
+}
+.wallet-actions #other-months-button::before {
+  z-index: 1;
+  background: #0d667e;
+  transition: left 430ms cubic-bezier(.22, 1, .36, 1),
+              top 430ms cubic-bezier(.22, 1, .36, 1),
+              width 430ms cubic-bezier(.22, 1, .36, 1),
+              height 430ms cubic-bezier(.22, 1, .36, 1),
+              transform 430ms cubic-bezier(.22, 1, .36, 1),
+              background-color 380ms ease;
+}
+.wallet-actions #other-months-button:hover:not(:disabled),
+.wallet-actions #other-months-button:focus-visible {
+  background: transparent;
+  color: #063e4c;
+  box-shadow: none;
+  transform: none;
+}
+.wallet-actions #other-months-button:hover:not(:disabled)::after,
+.wallet-actions #other-months-button:focus-visible::after { transform: scaleX(1); }
+.wallet-actions #other-months-button:hover:not(:disabled)::before,
+.wallet-actions #other-months-button:focus-visible::before { background: #ffffff; }
+.wallet-actions #other-months-button:active:not(:disabled) {
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .wallet-actions #other-months-button,
+  .wallet-actions #other-months-button::before,
+  .wallet-actions #other-months-button::after { transition: none; }
+}
