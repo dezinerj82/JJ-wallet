@@ -1166,20 +1166,65 @@ function enteredItemName() {
     (addItemSelect.value === NEW_ITEM ? addName.value.trim() : addItemSelect.value);
 }
 
-function clearItemValidation() {
-  for (const control of addForm.querySelectorAll(".wallet-invalid-field")) {
+// Consistent in-form validation replaces browser-native rectangular bubbles.
+const validationForms = [addForm, payForm, savingsForm];
+for (const form of validationForms) form.noValidate = true;
+function clearFormValidation(form) {
+  for (const control of form.querySelectorAll(".wallet-invalid-field")) {
     control.classList.remove("wallet-invalid-field");
     control.removeAttribute("aria-invalid");
   }
+  for (const hint of form.querySelectorAll(".wallet-field-hint")) hint.remove();
 }
-function flagItemField(control, message) {
-  addOptions.open = true;
+function clearItemValidation() {
+  clearFormValidation(addForm);
+}
+function flagFormField(control, message, statusElement, openDetails = false) {
+  const form = control.form;
+  clearFormValidation(form);
+  if (openDetails) addOptions.open = true;
+  const hint = document.createElement("span");
+  hint.className = "wallet-field-hint";
+  hint.setAttribute("role", "alert");
+  hint.textContent = message;
+  const parent = control.closest("label") || control.parentElement;
+  parent.append(hint);
   control.classList.add("wallet-invalid-field");
   control.setAttribute("aria-invalid", "true");
-  addStatus.textContent = message;
+  if (statusElement) statusElement.textContent = message;
   control.scrollIntoView({ block: "nearest", behavior: "smooth" });
   control.focus({ preventScroll: true });
 }
+function flagItemField(control, message) {
+  flagFormField(control, message, addStatus, addOptions.contains(control));
+}
+function validateWalletForm(form, statusElement) {
+  const invalid = [...form.elements].find(element =>
+    typeof element.checkValidity === "function" &&
+    element.willValidate && !element.checkValidity());
+  if (!invalid) return true;
+  let message = invalid.validity.valueMissing ? "Please fill out this field." :
+    invalid.validity.rangeUnderflow ? "The value is too small." :
+    invalid.validity.rangeOverflow ? "The value is too large." :
+    invalid.validity.stepMismatch ? "Check the number of decimal places." :
+    invalid.validity.typeMismatch ? "Please enter a valid value." :
+    invalid.validationMessage || "Please check this field.";
+  flagFormField(invalid, message, statusElement, addOptions.contains(invalid));
+  return false;
+}
+for (const form of validationForms) {
+  const clearChanged = event => {
+    const target = event.target;
+    if (!target.classList?.contains("wallet-invalid-field")) return;
+    clearFormValidation(form);
+    const statusElement = form === addForm ? addStatus :
+      form === payForm ? payStatus : savingsStatus;
+    statusElement.textContent = "";
+  };
+  form.addEventListener("input", clearChanged);
+  form.addEventListener("change", clearChanged);
+}
+
 function validateItemDetails(group) {
   clearItemValidation();
   if (group === "IN" || group === "Saving" || group === "Withdraw") return true;
@@ -1200,21 +1245,6 @@ function validateItemDetails(group) {
   }
   return true;
 }
-addForm.addEventListener("input", event => {
-  if (event.target.classList?.contains("wallet-invalid-field")) {
-    event.target.classList.remove("wallet-invalid-field");
-    event.target.removeAttribute("aria-invalid");
-    addStatus.textContent = "";
-  }
-});
-addForm.addEventListener("change", event => {
-  if (event.target.classList?.contains("wallet-invalid-field")) {
-    event.target.classList.remove("wallet-invalid-field");
-    event.target.removeAttribute("aria-invalid");
-    addStatus.textContent = "";
-  }
-});
-
 function enteredPrivateMeta(group, item) {
   if (group === "Withdraw") return null;
   const service = group !== "IN" && group !== "Saving";
@@ -1306,6 +1336,7 @@ function openUpdateForm(entry) {
 }
 
 function closePayPanel() {
+  clearFormValidation(payForm);
   payPanel.hidden = true;
   payingEntry = null;
   payStatus.textContent = "";
@@ -1330,7 +1361,7 @@ payCancel.addEventListener("click", closePayPanel);
 payForm.addEventListener("submit", async event => {
   event.preventDefault();
   if (!payingEntry || !activeFolderId || !getDriveToken() ||
-      !payForm.reportValidity()) return;
+      !validateWalletForm(payForm, payStatus)) return;
   const previous = payingEntry;
   const version = connectionVersion;
   paySave.disabled = true;
@@ -1352,6 +1383,7 @@ payForm.addEventListener("submit", async event => {
 });
 
 function closeSavingSettings() {
+  clearFormValidation(savingsForm);
   savingsPanel.hidden = true;
   editingSavings = null;
   savingsStatus.textContent = "";
@@ -1383,6 +1415,7 @@ savingsForm.addEventListener("submit", async event => {
   event.preventDefault();
   const previous = editingSavings;
   if (!previous || !activeFolderId || !getDriveToken()) return;
+  if (!validateWalletForm(savingsForm, savingsStatus)) return;
   const version = connectionVersion;
   savingsSave.disabled = true;
   savingsCancel.disabled = true;
@@ -1576,7 +1609,7 @@ addForm.addEventListener("submit", async event => {
     addStatus.textContent = "Your session has expired. Please sign in again.";
     return;
   }
-  if (!addForm.reportValidity()) return;
+  if (!validateWalletForm(addForm, addStatus)) return;
   const validationGroup = editingEntry?.group || activeAddCategory();
   if (!validateItemDetails(validationGroup)) return;
   const version = connectionVersion;
