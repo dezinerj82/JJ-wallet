@@ -1575,3 +1575,80 @@ h1 { border-bottom-color: #9dd5d7; }
   .wallet-actions #other-months-button::before,
   .wallet-actions #other-months-button::after { transition: none; }
 }
+
+/* Login layout: white page, no decorative illustration or panel.
+   Keep the email input and arrow separate and give them breathing room. */
+#login-view.front-door {
+  display: block;
+  min-height: 0;
+  margin: 1.75rem 0 0;
+  padding: 0;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+}
+#login-view.front-door::before { content: none; display: none; }
+#login-view .front-door-content {
+  width: min(100%, 32rem);
+  margin: 0;
+  text-align: left;
+}
+#login-heading,
+#login-view .front-door-email label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+#login-view .front-door-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: .8rem;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+#login-view .front-door-input-wrap input {
+  flex: 1 1 auto;
+  width: 0;
+  min-height: 3.2rem;
+  padding: .76rem 1.15rem;
+  border: 1.5px solid #9dd5d7;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #0d667e;
+  box-shadow: none;
+  font-size: 1rem;
+}
+#login-view .front-door-input-wrap input::placeholder { color: #538b99; opacity: 1; }
+#login-view .front-door-input-wrap input:focus-visible {
+  outline: 2px solid #9dd5d7;
+  outline-offset: 2px;
+}
+#login-view #login-email-next {
+  flex: 0 0 3.2rem;
+  width: 3.2rem;
+  height: 3.2rem;
+  min-height: 3.2rem;
+  border-radius: 50%;
+  padding: 0;
+  background: #f7bd4b;
+  color: #513c12;
+  box-shadow: none;
+}
+#login-view #login-email-next:hover:not(:disabled) { background: #eab03a; }
+#login-view .front-door-status { text-align: left; }
+#login-view .front-door-connect,
+#login-view .front-door-denied { text-align: left; }
+@media (max-width: 420px) {
+  #login-view .front-door-input-wrap { gap: .55rem; }
+  #login-view .front-door-input-wrap input { padding-inline: .85rem; font-size: .92rem; }
+}
