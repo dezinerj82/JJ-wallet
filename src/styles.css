@@ -1804,3 +1804,22 @@ h1 { border-bottom-color: #9dd5d7; }
 
 /* The wallet heading is the current month; no separate month row. */
 #wallet-heading #month-label { color: inherit; width: auto; order: initial; }
+
+/* Month-close reminder floats above the wallet without changing preview state. */
+.month-lock-alert {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  width: min(90vw, 26rem);
+  max-width: 26rem;
+  padding: 1.6rem;
+  border: 1px solid var(--subtle-line);
+  border-radius: 18px;
+  background: #fff;
+  color: var(--ink);
+  box-shadow: 0 14px 42px rgba(0, 71, 78, .18);
+  text-align: center;
+}
+.month-lock-alert::backdrop { background: rgba(15, 55, 67, .18); }
+.month-lock-alert p { margin: 0 0 1.2rem; font-weight: 650; }
+.month-lock-alert button { min-width: 7rem; }
