@@ -1499,6 +1499,8 @@ function logout() {
 
 logoutButton.addEventListener("click", logout);
 
+// Make the front door visible before waiting for the external Google library.
+showSignedOut("Preparing Google sign-in...");
 try {
   await initialiseGoogleLogin({
     shouldRememberSession: () => true,
