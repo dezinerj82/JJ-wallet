@@ -1713,3 +1713,19 @@ h1 { border-bottom-color: #9dd5d7; }
 /* Transition is visual only: never intercept wallet actions or Sign out. */
 .login-transition,
 .login-transition.is-visible { pointer-events: none; }
+
+/* Login motion: visual only. */
+#login-view .login-stage{position:relative;width:min(100%,32rem);min-height:3.5rem}
+#login-view #login-start-button{position:absolute;left:0;top:0;z-index:4;display:inline-flex;justify-content:center;align-items:center;width:11.6rem;min-height:3.2rem;padding:.6rem 1.1rem;border:0;border-radius:99px;background:#f7bd4b;color:#513c12;font-size:1rem;font-weight:650;white-space:nowrap;cursor:pointer;box-shadow:none;transition:opacity .25s,width .33s}
+#login-view #login-start-button.login-start-exiting{opacity:0;width:3.2rem;pointer-events:none}
+#login-view #login-email-form{position:relative;opacity:1;transition:opacity .36s}
+#login-view #login-email-form.login-form-closed{opacity:0;visibility:hidden;pointer-events:none}
+#login-view #login-email-form .front-door-input-wrap input{background:rgba(157,213,215,.11);border:0;box-shadow:none}
+#login-view #login-email-form.login-form-opening input{animation:login-reveal .59s cubic-bezier(.22,1,.36,1) both}
+#login-view #login-email-next{position:relative;z-index:2;transition:background-color .33s,color .33s,transform .33s}
+#login-view #login-email-form.login-denied #login-email-next{background:#df5263;color:white;animation:login-shake .4s ease}
+#login-view #login-email-form.login-approved #login-email-next{background:#79cfa5;color:#164e3f;transform:scale(1.08)}
+#login-view #login-email-form.login-approved input{background:rgba(121,207,165,.16)}
+@keyframes login-reveal{from{opacity:0;transform:translateX(-35px) scaleX(.88)}to{opacity:1;transform:none}}
+@keyframes login-shake{0%,100%{transform:none}25%{transform:translateX(-5px)}60%{transform:translateX(4px)}}
+@media(prefers-reduced-motion:reduce){#login-view #login-start-button,#login-view #login-email-form,#login-view #login-email-next{transition:none;animation:none}}
