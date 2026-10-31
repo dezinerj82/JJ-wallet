@@ -727,7 +727,12 @@ function mergeCarriedRows(entries) {
 }
 
 function renderTable(month, target, groupStates, fromComparison = false) {
-  const groups = entriesForMonth(walletEntries, month);
+  // For a future month unlocked by Clear bill, include unpaid balances
+  // from already closed origin months in the preview.
+  const asOf = month > monthKey(new Date())
+    ? new Date(Number(month.slice(0, 4)), Number(month.slice(4, 6)) - 1, 1)
+    : new Date();
+  const groups = entriesForMonth(walletEntries, month, asOf);
   let savingPlan = null;
   let holds = new Set();
   try {
@@ -848,7 +853,8 @@ function renderTable(month, target, groupStates, fromComparison = false) {
         });
       }
       actionCell.append(editButton);
-      if (month === selectedMonth && !fromComparison && entry.group !== "IN" &&
+      if (month === selectedMonth && month <= monthKey(new Date()) &&
+          !closedMonths.has(month) && !fromComparison && entry.group !== "IN" &&
           entry.group !== "Saving" && entry.unpaid > 0) {
         const parts = entry.paymentParts || [entry];
         for (const part of parts) {
@@ -1211,7 +1217,7 @@ function enteredItemName() {
 }
 
 // Consistent in-form validation replaces browser-native rectangular bubbles.
-const validationForms = [addForm, payForm, savingsForm];
+const validationForms = [addForm, payForm, savingsForm, clearBillForm];
 for (const form of validationForms) form.noValidate = true;
 function clearFormValidation(form) {
   for (const control of form.querySelectorAll(".wallet-invalid-field")) {
@@ -1262,7 +1268,8 @@ for (const form of validationForms) {
     if (!target.classList?.contains("wallet-invalid-field")) return;
     clearFormValidation(form);
     const statusElement = form === addForm ? addStatus :
-      form === payForm ? payStatus : savingsStatus;
+      form === payForm ? payStatus :
+      form === clearBillForm ? clearBillStatus : savingsStatus;
     statusElement.textContent = "";
   };
   form.addEventListener("input", clearChanged);
@@ -1345,7 +1352,8 @@ function openUpdateForm(entry) {
     setWalletMessage("Your session expired. Sign in again to update this item.", true);
     return;
   }
-  if (entry.group === "Saving" || entry.month < currentMonth) return;
+  if (entry.group === "Saving" || entry.month < currentMonth ||
+      closedMonths.has(entry.month)) return;
   closeSavingSettings();
   closePayPanel();
 
@@ -1402,6 +1410,7 @@ function clearBillEntries(month) {
   return result;
 }
 function closeClearBillPanel() {
+  clearFormValidation(clearBillForm);
   clearBillPanel.hidden = true;
   clearBillParts = [];
   clearBillStatus.textContent = "";
@@ -1504,7 +1513,8 @@ function closePayPanel() {
 }
 
 function openPayPanel(entry) {
-  if (!activeFolderId || !getDriveToken() || entry.month !== selectedMonth) return;
+  if (!activeFolderId || !getDriveToken() || entry.month !== selectedMonth ||
+      closedMonths.has(selectedMonth) || selectedMonth > monthKey(new Date())) return;
   closeAddPanel();
   closeSavingSettings();
   payingEntry = {...entry};
@@ -1721,7 +1731,8 @@ deleteItemButton.addEventListener("click", async () => {
     addStatus.textContent = "Your session has expired. Please sign in again.";
     return;
   }
-  if (previous.group === "Saving" || previous.month < currentMonth) return;
+  if (previous.group === "Saving" || previous.month < currentMonth ||
+      closedMonths.has(previous.month)) return;
 
   const confirmed = await confirmWallet("Are you sure?");
   if (!confirmed) return;
