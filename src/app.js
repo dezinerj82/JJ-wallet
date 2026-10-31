@@ -1556,10 +1556,25 @@ refreshButton.addEventListener("click", () => {
   }
 });
 
-function logout() {
+function logout(event) {
+  event?.preventDefault();
   clearTimeout(transitionTimer);
+  // Terminate local credentials before touching any view state.
   signOut();
-      showSignedOut();
+  // Always leave the authenticated view, even if a UI reset fails.
+  try {
+    showSignedOut("");
+  } catch (error) {
+    console.error("Wallet sign-out cleanup failed:", error);
+  } finally {
+    loginRequestPending = false;
+    loginTransition.hidden = true;
+    loginTransition.classList.remove("is-visible", "is-complete");
+    walletView.hidden = true;
+    loginView.hidden = false;
+    resetFrontDoor();
+    status.textContent = "";
+  }
 }
 
 logoutButton.addEventListener("click", logout);
