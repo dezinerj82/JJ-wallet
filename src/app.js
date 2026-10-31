@@ -66,7 +66,7 @@ loginEmail.addEventListener("input", () => {
 });
 loginEmailForm.addEventListener("submit", event => {
   event.preventDefault();
-  if (loginRequestPending || !loginEmail.reportValidity()) return;
+  if (!loginEmail.reportValidity()) return;
   const email = loginEmail.value.trim().toLowerCase();
   if (!email) return;
   // This quick first-layer check only controls the UI. Google verification
@@ -85,7 +85,7 @@ loginEmailForm.addEventListener("submit", event => {
     console.warn("Google sign-in is not ready:", googleInitializationError);
     loginEmail.placeholder = "Try again";
     status.textContent = "";
-    if (googleInitializationError) void initializeGoogleFrontDoor();
+    void initializeGoogleFrontDoor();
     return;
   }
   loginRequestPending = true;
@@ -114,6 +114,50 @@ loginEmailForm.addEventListener("submit", event => {
     status.textContent = error.message || "Try again";
   }
 });
+
+// Keep the first layer available while the Google library initializes.
+// Failed initial loads can be retried without reloading the wallet page.
+const googleCallbacks = {
+  shouldRememberSession: () => true,
+  onSignedIn: showSignedIn,
+  onUnauthorized: showUnauthorized,
+  onError: message => {
+    console.warn("Google sign-in did not complete:", message);
+    loginRequestPending = false;
+    loginEmailNext.disabled = false;
+    loginEmailForm.classList.remove("login-denied");
+    loginEmail.value = "";
+    loginEmail.placeholder = "Try again";
+    status.textContent = "";
+  },
+  onDriveReady,
+  onDriveError: message => {
+    activeFolderId = null;
+    console.warn("Google Drive unavailable:", message);
+    setWalletMessage(message, true);
+  }
+};
+let initializingGoogle = null;
+async function initializeGoogleFrontDoor() {
+  if (initializingGoogle) return initializingGoogle;
+  initializingGoogle = (async () => {
+    try {
+      await initialiseGoogleLogin(googleCallbacks);
+      signInReady = true;
+      googleInitializationError = null;
+    } catch (error) {
+      signInReady = false;
+      googleInitializationError = error;
+      console.warn("Google sign-in initialization failed:", error);
+    } finally {
+      initializingGoogle = null;
+    }
+  })();
+  return initializingGoogle;
+}
+// Start Google loading as soon as login controls exist, independently of
+// the rest of the wallet UI initialization.
+void initializeGoogleFrontDoor();
 
 const walletView = document.getElementById("wallet-view");
 const walletState = document.getElementById("wallet-state");
@@ -1519,45 +1563,4 @@ function logout() {
 
 logoutButton.addEventListener("click", logout);
 
-// Keep the first layer available while the Google library initializes.
-// Failed initial loads can be retried without reloading the wallet page.
-const googleCallbacks = {
-  shouldRememberSession: () => true,
-  onSignedIn: showSignedIn,
-  onUnauthorized: showUnauthorized,
-  onError: message => {
-    console.warn("Google sign-in did not complete:", message);
-    loginRequestPending = false;
-    loginEmailNext.disabled = false;
-    loginEmailForm.classList.remove("login-denied");
-    loginEmail.value = "";
-    loginEmail.placeholder = "Try again";
-    status.textContent = "";
-  },
-  onDriveReady,
-  onDriveError: message => {
-    activeFolderId = null;
-    console.warn("Google Drive unavailable:", message);
-    setWalletMessage(message, true);
-  }
-};
-let initializingGoogle = null;
-async function initializeGoogleFrontDoor() {
-  if (initializingGoogle) return initializingGoogle;
-  initializingGoogle = (async () => {
-    try {
-      await initialiseGoogleLogin(googleCallbacks);
-      signInReady = true;
-      googleInitializationError = null;
-    } catch (error) {
-      signInReady = false;
-      googleInitializationError = error;
-      console.warn("Google sign-in initialization failed:", error);
-    } finally {
-      initializingGoogle = null;
-    }
-  })();
-  return initializingGoogle;
-}
 showSignedOut("");
-await initializeGoogleFrontDoor();
