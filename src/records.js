@@ -55,8 +55,11 @@ function parseLine(line) {
     const paid = safeAmount(fields[4]);
     const unpaid = safeAmount(fields[5]);
     if ([amount, paid, unpaid].some(v => v === null)) return null;
+    if (Math.round((paid + unpaid) * 100) !== Math.round(amount * 100)) return null;
+    const openingUnpaid = group === "Others" ? safeAmount(fields[9] || "0") : 0;
+    if (openingUnpaid === null || openingUnpaid > amount) return null;
     return group === "Others"
-      ? { group, item, month, amount, paid, unpaid,
+      ? { group, item, month, amount, paid, unpaid, openingUnpaid,
           retail: fields[6] || "", url: fields[7] || "", remark: fields[8] || "" }
       : { group, item, month, amount, paid, unpaid, remark: fields[6] || "" };
   }
