@@ -8,8 +8,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&amp;family=Google+Sans:wght@400;500;600;700&amp;family=Roboto:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
   <link rel="icon" type="image/svg+xml" href="assets/favicon.svg?v=green-dollar-1">
-  <link rel="stylesheet" href="src/styles.css?v=20261031-monthfont30">
-  <script src="src/app.js?v=20261031-hovercursor29" type="module"></script>
+  <link rel="stylesheet" href="src/styles.css?v=20261031-clearbill31">
+  <script src="src/app.js?v=20261031-clearbill31" type="module"></script>
 </head>
 <body>
   <main id="app">
@@ -47,6 +47,7 @@
       <div class="wallet-heading-row">
         <h2 id="wallet-heading"><span id="month-label" aria-live="polite"></span></h2>
         <div class="wallet-actions">
+          <button type="button" id="clear-bill-button">Clear bill</button>
           <button type="button" id="other-months-button" aria-haspopup="dialog" aria-controls="other-months-window" aria-expanded="false">Other months</button>
           <button type="button" id="refresh-wallet-button">Refresh</button>
           <button type="button" id="add-item-button">Add</button>
@@ -165,14 +166,29 @@
         </form>
       </section>
 
+      <section id="clear-bill-panel" class="add-item-panel" hidden>
+        <h3>Clear bill</h3>
+        <form id="clear-bill-form" autocomplete="off" novalidate>
+          <div class="pay-form-grid" id="clear-bill-rows">
+            <strong>Pay item</strong><strong>Payment (RM)</strong>
+          </div>
+          <p id="clear-bill-status" class="form-status" role="status" aria-live="polite"></p>
+          <div class="form-actions-right">
+            <button type="button" id="clear-bill-cancel">Cancel</button>
+            <button type="submit" id="clear-bill-submit">Pay</button>
+          </div>
+        </form>
+      </section>
+
       <section id="pay-item-panel" class="add-item-panel" hidden>
-        <h3>Pay item</h3>
         <form id="pay-item-form" autocomplete="off">
-          <p id="pay-item-name"></p>
-          <label class="setting-note">Payment (RM)
+          <div class="pay-form-grid">
+            <h3>Pay item</h3>
+            <span class="pay-column-heading">Payment (RM)</span>
+            <strong id="pay-item-name"></strong>
             <input id="pay-item-amount" type="number" min="0.01" step="0.01"
-              inputmode="decimal" required>
-          </label>
+              inputmode="decimal" aria-label="Payment (RM)" required>
+          </div>
           <p id="pay-item-status" class="form-status" role="status" aria-live="polite"></p>
           <div class="form-actions-right">
             <button type="button" id="pay-item-cancel">Cancel</button>
