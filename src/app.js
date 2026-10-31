@@ -21,6 +21,7 @@ let walletBalanceComplete = false;
 let activeFolderId = null;
 let connectionVersion = 0;
 let signInReady = false;
+let googleInitializationError = null;
 let editingEntry = null;
 let editingSavings = null;
 let payingEntry = null;
@@ -79,9 +80,12 @@ loginEmailForm.addEventListener("submit", event => {
     return;
   }
   if (!signInReady) {
-    loginEmail.value = "";
+    // If the Google library was temporarily unavailable, do not treat
+    // that as an incorrect email. The library is retried in the background.
+    console.warn("Google sign-in is not ready:", googleInitializationError);
     loginEmail.placeholder = "Try again";
     status.textContent = "";
+    if (googleInitializationError) void initializeGoogleFrontDoor();
     return;
   }
   loginRequestPending = true;
@@ -1515,30 +1519,45 @@ function logout() {
 
 logoutButton.addEventListener("click", logout);
 
-// Make the front door visible before waiting for the external Google library.
-showSignedOut("");
-try {
-  await initialiseGoogleLogin({
-    shouldRememberSession: () => true,
-    onSignedIn: showSignedIn,
-    onUnauthorized: showUnauthorized,
-    onError: () => {
-      loginRequestPending = false;
-      loginEmailNext.disabled = false;
-      loginEmailForm.classList.remove("login-denied");
-      loginEmail.value = "";
-      loginEmail.placeholder = "Try again";
-      status.textContent = "";
-    },
-    onDriveReady,
-    onDriveError: message => {
-      activeFolderId = null;
-      setWalletMessage(message, true);
+// Keep the first layer available while the Google library initializes.
+// Failed initial loads can be retried without reloading the wallet page.
+const googleCallbacks = {
+  shouldRememberSession: () => true,
+  onSignedIn: showSignedIn,
+  onUnauthorized: showUnauthorized,
+  onError: message => {
+    console.warn("Google sign-in did not complete:", message);
+    loginRequestPending = false;
+    loginEmailNext.disabled = false;
+    loginEmailForm.classList.remove("login-denied");
+    loginEmail.value = "";
+    loginEmail.placeholder = "Try again";
+    status.textContent = "";
+  },
+  onDriveReady,
+  onDriveError: message => {
+    activeFolderId = null;
+    console.warn("Google Drive unavailable:", message);
+    setWalletMessage(message, true);
+  }
+};
+let initializingGoogle = null;
+async function initializeGoogleFrontDoor() {
+  if (initializingGoogle) return initializingGoogle;
+  initializingGoogle = (async () => {
+    try {
+      await initialiseGoogleLogin(googleCallbacks);
+      signInReady = true;
+      googleInitializationError = null;
+    } catch (error) {
+      signInReady = false;
+      googleInitializationError = error;
+      console.warn("Google sign-in initialization failed:", error);
+    } finally {
+      initializingGoogle = null;
     }
-  });
-  signInReady = true;
-  showSignedOut("");
-} catch (error) {
-  signInReady = false;
-  showSignedOut(error.message);
+  })();
+  return initializingGoogle;
 }
+showSignedOut("");
+await initializeGoogleFrontDoor();
