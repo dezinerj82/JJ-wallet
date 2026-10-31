@@ -342,6 +342,18 @@ export function calculateMonthlyBalance(allEntries, month, asOf = new Date()) {
   return calculateMonthlyPlan(allEntries, month, asOf).balance;
 }
 
+// Outstanding obligations originating before the displayed month.
+// Current-month charges are excluded, and settled overdue payments are deducted.
+export function calculatePastUnpaid(allEntries, month) {
+  let cents = 0;
+  for (const entry of allEntries) {
+    if (!isExpenseGroup(entry.group) || entry.month >= month) continue;
+    cents += Math.round(effectiveUnpaid(entry, month) * 100);
+    if (!Number.isSafeInteger(cents)) throw new Error("Past unpaid total is too large.");
+  }
+  return cents / 100;
+}
+
 export function calculateUnpaidForMonth(allEntries, month, asOf = new Date()) {
   const groups = entriesForMonth(allEntries, month, asOf);
   let cents = 0;
