@@ -1709,3 +1709,7 @@ h1 { border-bottom-color: #9dd5d7; }
 @media (max-width: 600px) {
   .wallet-actions #other-months-button { padding: .55rem .85rem; }
 }
+
+/* Transition is visual only: never intercept wallet actions or Sign out. */
+.login-transition,
+.login-transition.is-visible { pointer-events: none; }
