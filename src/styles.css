@@ -1470,3 +1470,52 @@ h1 { border-bottom-color: #9dd5d7; }
 @media (prefers-reduced-motion: reduce) {
   .wallet-actions #other-months-button::before { transition: none; }
 }
+
+/* Login front door: presentation-only; OAuth verification and Drive access are unchanged. */
+.front-door {
+  position: relative;
+  min-height: min(66vh, 590px);
+  margin: .7rem auto 0;
+  display: grid;
+  place-items: center;
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: 24px;
+  background: #f5f8fa;
+}
+.front-door::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(ellipse at 105% -10%, #fff5ef 0 37%, transparent 37.3%),
+    linear-gradient(154deg, transparent 59%, #e4f1f5 59.2%, #f9fafc 86%);
+}
+.front-door-content { width: min(100% - 2rem, 460px); text-align: center; }
+#login-view h2 { font-size: clamp(1.65rem, 4vw, 2.25rem); margin: 0 0 1.5rem; color: #405579; }
+.front-door-email label { display: block; text-align: left; margin: 0 0 .55rem; color: #405579; font-weight: 600; }
+.front-door-input-wrap { display: flex; align-items: center; border-radius: 999px; background: #fff; padding: .27rem; box-shadow: 0 8px 28px rgba(48,68,99,.08); }
+.front-door-input-wrap input { flex: 1; min-width: 0; border: 0; outline: 0; padding: .8rem 1rem; background: transparent; color: #405579; font: inherit; }
+.front-door-input-wrap input:focus-visible { outline: 2px solid #9dd5d7; outline-offset: 0; border-radius: 999px; }
+#login-email-next { background: #f7bd4b; color: #513c12; min-width: 3rem; min-height: 3rem; padding: .4rem; font-size: 1.5rem; box-shadow: none; }
+#login-email-next:hover:not(:disabled) { background: #eab03a; }
+.front-door-step-label { font-size: 1.05rem; font-weight: 600; color: #405579; margin: 0 0 1rem; }
+#login-button { display: inline-flex; align-items: center; justify-content: center; gap: 1.1rem; min-height: 3.4rem; padding: .85rem 1.5rem; background: #f7bd4b; color: #513c12; font-size: 1.05rem; }
+#login-button:hover:not(:disabled) { background: #eab03a; }
+.front-door-back { display: block; margin: 1rem auto 0; min-height: 2.1rem; background: transparent; box-shadow: none; color: #405579; font-size: .9rem; }
+.front-door-back:hover:not(:disabled) { background: #e5eef4; }
+.front-door-status { min-height: 1.4rem; margin: 1.1rem 0 0; color: #405579; font-size: .85rem; }
+.front-door-denied-icon { width: 3.9rem; height: 3.9rem; display: grid; place-items: center; margin: 0 auto 1rem; border-radius: 50%; background: #e95061; color: white; font-size: 3rem; line-height: 1; }
+.front-door-denied-title { color: #d83c54; font-weight: 700; font-size: 1.25rem; margin: 0 0 .5rem; }
+#unauthorized-account { overflow-wrap: anywhere; color: #405579; }
+#unauthorized-logout-button { background: #f7bd4b; color: #513c12; min-width: 10rem; }
+.login-transition { position: fixed; inset: 0; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .6rem; background: #f5f8fa; opacity: 0; transition: opacity 400ms ease; pointer-events: none; }
+.login-transition.is-visible { opacity: 1; pointer-events: auto; }
+.login-transition-check { width: 5rem; height: 5rem; display: grid; place-items: center; border-radius: 50%; background: #9dd5d7; color: #0d667e; font-size: 3.3rem; transform: scale(.7); opacity: 0; transition: transform 450ms ease, opacity 450ms ease, background 450ms ease; }
+.login-transition.is-complete .login-transition-check { transform: scale(1); opacity: 1; background: #97dec3; color: #165c42; }
+.login-transition p { color: #165c42; font-weight: 700; opacity: 0; transition: opacity 400ms ease; }
+.login-transition.is-complete p { opacity: 1; }
+@media (prefers-reduced-motion: reduce) {
+  .login-transition, .login-transition-check, .login-transition p { transition: none; }
+}
