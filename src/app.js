@@ -593,7 +593,10 @@ function showItemTooltip(target, text) {
 function tooltipText(entry) {
   const meta = entry.meta;
   const lines = [];
-  if (meta?.note?.trim()) lines.push(meta.note.trim());
+  if (meta?.note?.trim() && (entry.group === "Saving" ||
+      entry.group === "IN" || entry.unpaid > 0)) {
+    lines.push(meta.note.trim());
+  }
   for (const debt of entry.carryParts || (entry.carryOver ? [entry] : [])) {
     lines.push(formatMonth(debt.carryFrom) + " RM" +
       formatAmount(debt.unpaid) + " pending");
@@ -605,7 +608,7 @@ function tooltipText(entry) {
     const effective = effectiveServiceMonth(meta, walletEntries);
     lines.push("Last service : " + formatMonth(effective));
   }
-  return lines.join("\n\n");
+  return lines.join("\n");
 }
 
 function addItemNameCell(row, entry, isHold = false) {
@@ -1119,7 +1122,7 @@ function enteredPrivateMeta(group, item) {
   if (group === "Withdraw") return null;
   const service = group !== "IN" && group !== "Saving";
   const input = {
-    note: addHoverNote.value,
+    note: addHoverNote.value.trim(),
     lastService: service ? addLastService.value.replace("-", "") : "",
     interval: service ? Number(addServiceInterval.value) : 0,
     remindBefore: service ? Number(addRemindBefore.value) : 0
@@ -1130,7 +1133,10 @@ function enteredPrivateMeta(group, item) {
 }
 
 function fillPrivateMeta(meta) {
-  addHoverNote.value = meta?.note || "";
+  // Existing notes remain visible in the item tooltip.
+  // The edit box accepts only an additional line, never a replacement.
+  addHoverNote.value = "";
+  addHoverNote.placeholder = meta?.note ? "Add another note" : "Add a note";
   addLastService.value = meta?.lastService
     ? meta.lastService.slice(0, 4) + "-" + meta.lastService.slice(4) : "";
   addServiceInterval.value = String(meta?.interval || 0);
