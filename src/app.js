@@ -55,7 +55,7 @@ function resetFrontDoor() {
   loginEmailForm.classList.remove("login-denied", "login-approved");
   loginTransition.hidden = true;
   loginTransition.classList.remove("is-visible", "is-complete");
-  loginEmailNext.disabled = !signInReady;
+  loginEmailNext.disabled = false;
   loginEmailNext.querySelector("span").textContent = "➜";
 }
 const loginEmailNext = document.getElementById("login-email-next");
@@ -65,7 +65,7 @@ loginEmail.addEventListener("input", () => {
 });
 loginEmailForm.addEventListener("submit", event => {
   event.preventDefault();
-  if (loginRequestPending || !signInReady || !loginEmail.reportValidity()) return;
+  if (loginRequestPending || !loginEmail.reportValidity()) return;
   const email = loginEmail.value.trim().toLowerCase();
   if (!email) return;
   // This quick first-layer check only controls the UI. Google verification
@@ -76,6 +76,12 @@ loginEmailForm.addEventListener("submit", event => {
   }
   if (emailFingerprint !== 0x9cacba41) {
     showUnauthorized();
+    return;
+  }
+  if (!signInReady) {
+    loginEmail.value = "";
+    loginEmail.placeholder = "Try again";
+    status.textContent = "";
     return;
   }
   loginRequestPending = true;
