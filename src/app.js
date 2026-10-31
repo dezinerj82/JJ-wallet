@@ -192,7 +192,10 @@ function setRememberedBrowser(remember) {
   } catch { /* Browser storage may be disabled. */ }
 }
 
-rememberBrowser.checked = readRememberedBrowser() || localStorage.getItem(TRUST_KEY) === null;
+let hasRememberPreference = false;
+try { hasRememberPreference = localStorage.getItem(TRUST_KEY) !== null; }
+catch { /* Storage may be unavailable. */ }
+rememberBrowser.checked = hasRememberPreference ? readRememberedBrowser() : true;
 
 function refreshLoginButton() {
   const fast = rememberBrowser.checked && !selectingAccountRequired;
@@ -825,6 +828,8 @@ async function onDriveReady() {
     }
   } catch (error) {
     if (version !== connectionVersion) return;
+    loginTransition.hidden = true;
+    loginTransition.classList.remove("is-visible", "is-complete");
     setWalletMessage(error.message || "Couldn't open your wallet. Please try again.", true);
   } finally {
     if (!activeFolderId) { loginTransition.hidden = true; loginTransition.classList.remove("is-visible", "is-complete"); }
